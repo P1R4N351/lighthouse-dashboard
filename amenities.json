@@ -1,9 +1,9 @@
 {
-  "version": 1,
-  "updated": "2026-07-27",
+  "version": 2,
+  "updated": "2026-07-31",
   "section": "Amenities",
   "blurb": "Windows on the world, kept open for anyone who finds them. No account, no paywall, no tracking added by us.",
-  "provenance": "Canonical copy lives in the homepage repo (projects/homepage/amenities.json) and is baked into every lighthouse image by mkimg-armbian.sh. The two files are asserted byte-identical by tests/smoke.sh.",
+  "provenance": "Canonical copy lives in the homepage repo (projects/homepage/amenities.json) and is baked verbatim into every lighthouse image by mkimg-armbian.sh; tests/smoke.sh asserts those two are byte-identical. THIS copy is the public mirror and is canon minus any entry whose URL carries a mesh-private identifier (.ts.net, .onion, RFC1918 or CGNAT), because publishing those would disclose part of the internal map — the reason this repo was seeded rather than forked. Omitted here by that rule: House Cinema.",
   "items": [
     {
       "id": "voxorb",
