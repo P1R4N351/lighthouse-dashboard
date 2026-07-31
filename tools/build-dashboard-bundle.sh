@@ -84,6 +84,43 @@ PY
   return 0
 }
 
+# Read the FINISHED ARCHIVE back and run the device's own listing gate on it.
+#
+# WHY THIS EXISTS: staging a clean directory is not evidence that the archive is
+# clean. On macOS, `tar` writes an `._<name>` AppleDouble member for every file
+# carrying extended attributes — members that appear AFTER the staging check, and
+# that BSD `tar -tzf` then omits from its own listing, so the build host cannot
+# see them by eye. A v5 bundle shipped that way and every device refused it with
+# "entry '._index.html.tmpl' is not an allowed data file".
+#
+# So: verify the artifact, not the intent, and verify it with a reader that does
+# not hide members (python's tarfile). The member set must equal the allowed set
+# EXACTLY — no extras, no absences, no directories, no absolute or traversing
+# paths — which is the same rule the device applies before it will install.
+verify_archive() {   # verify_archive <tarball>
+  python3 - "$1" "${BUNDLE_FILES[@]}" <<'PY' || die "archive rejected by the device's own listing gate" 4
+import sys, tarfile
+path, allowed = sys.argv[1], sys.argv[2:]
+with tarfile.open(path, "r:gz") as tf:
+    members = tf.getmembers()
+names = [m.name for m in members]
+bad = [m.name for m in members if not m.isfile()]
+if bad:
+    sys.exit("non-file members: %s" % ", ".join(sorted(bad)))
+unsafe = [n for n in names if n.startswith("/") or ".." in n.split("/") or "/" in n]
+if unsafe:
+    sys.exit("unsafe paths: %s" % ", ".join(sorted(unsafe)))
+extra, missing = sorted(set(names) - set(allowed)), sorted(set(allowed) - set(names))
+if extra or missing:
+    sys.exit("member set wrong — extra: %s; missing: %s"
+             % (", ".join(extra) or "none", ", ".join(missing) or "none"))
+if len(names) != len(set(names)):
+    sys.exit("duplicate members")
+print("archive gate ok (%d data file(s), no extras)" % len(names))
+PY
+  return 0
+}
+
 write_manifest() {   # write_manifest <tarball> <version> <released> <dest>
   local sha bytes
   sha="$(sha256_of "$1")" || die "could not hash the bundle" 4
@@ -120,8 +157,14 @@ main() {
   trap '[[ -n "${STAGE_DIR}" ]] && rm -rf "${STAGE_DIR}"' EXIT INT TERM
   stage_files "${STAGE_DIR}" "${ver}" "${released}"
   tarball="${OUT}/dashboard.tar.gz"
-  ( cd "${STAGE_DIR}" && tar -czf "${tarball}" "${BUNDLE_FILES[@]}" ) \
+  # COPYFILE_DISABLE stops BSD tar emitting AppleDouble (`._*`) members for
+  # extended attributes; --no-xattrs is the GNU-side equivalent and is passed
+  # only when this tar accepts it, so the same script builds on both platforms.
+  local tar_opts=()
+  tar --no-xattrs -cf /dev/null -T /dev/null >/dev/null 2>&1 && tar_opts+=(--no-xattrs)
+  ( cd "${STAGE_DIR}" && COPYFILE_DISABLE=1 tar "${tar_opts[@]}" -czf "${tarball}" "${BUNDLE_FILES[@]}" ) \
     || die "tar failed" 4
+  verify_archive "${tarball}"
   write_manifest "${tarball}" "${ver}" "${released}" "${OUT}/MANIFEST.json"
   if [[ -n "${KEY}" ]]; then
     rm -f "${OUT}/MANIFEST.json.sig"
