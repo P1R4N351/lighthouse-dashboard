@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "updated": "2026-07-27",
+  "section": "Amenities",
+  "blurb": "Windows on the world, kept open for anyone who finds them. No account, no paywall, no tracking added by us.",
+  "provenance": "Canonical copy lives in the homepage repo (projects/homepage/amenities.json) and is baked into every lighthouse image by mkimg-armbian.sh. The two files are asserted byte-identical by tests/smoke.sh.",
+  "items": [
+    {
+      "id": "voxorb",
+      "name": "VoxOrb",
+      "url": "https://voxorb.com/globe?v=2.46358%2C35.22544%2C12666534%2C360%2C-89.9&c=0",
+      "blurb": "Live global events plotted on an interactive globe, in real time.",
+      "tag": "world",
+      "glyph": "globe",
+      "g": ["#4F9BE6", "#2A6BB0"]
+    },
+    {
+      "id": "worldpop",
+      "name": "World Population Clock",
+      "url": "https://www.worldometers.info/world-population/",
+      "blurb": "Worldometer's live count of everyone alive right now, and the rates behind it.",
+      "tag": "world",
+      "glyph": "people",
+      "g": ["#5FB98C", "#348A5E"]
+    },
+    {
+      "id": "uncensored",
+      "name": "The Uncensored Library",
+      "url": "https://www.uncensoredlibrary.com/en",
+      "blurb": "Reporters Without Borders' library of censored journalism, kept reachable where the press is not.",
+      "tag": "press freedom",
+      "glyph": "book",
+      "g": ["#C9A03F", "#A07724"]
+    },
+    {
+      "id": "viberadio",
+      "name": "Vibe Radio",
+      "url": "https://viberadio.live/",
+      "blurb": "Live streaming portal.",
+      "tag": "listen",
+      "glyph": "radio",
+      "g": ["#D96A8B", "#A83E5F"]
+    },
+    {
+      "id": "nmtv",
+      "name": "NMTV",
+      "url": "https://nmtv.online",
+      "blurb": "Noa's Music Television — non-stop music video channels, MTV-style, 24/7.",
+      "tag": "watch",
+      "glyph": "tv",
+      "g": ["#7A86C0", "#4A5590"]
+    },
+    {
+      "id": "doomsday",
+      "name": "Doomsday Clock",
+      "url": "https://thebulletin.org/doomsday-clock/",
+      "blurb": "The Bulletin of the Atomic Scientists' standing estimate of how late it is.",
+      "tag": "world",
+      "glyph": "clock",
+      "g": ["#C4552F", "#8E3315"]
+    }
+  ]
+}
