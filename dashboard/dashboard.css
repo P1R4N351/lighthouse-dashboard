@@ -54,6 +54,15 @@ h1{font-size:clamp(24px,4.4vw,34px);text-align:center;margin:0 0 6px;letter-spac
 .sub{text-align:center;color:var(--muted);margin:0 auto 10px;max-width:56ch;line-height:1.55}
 .host{text-align:center;color:var(--bronze);font-size:13px;letter-spacing:.14em;
   text-transform:uppercase;margin-bottom:30px}
+/* Uptime sits in the top corner on a line of its own, so the DESIGNATION below
+   is centred on its own axis. It used to share that line ("pharos · up 14h"),
+   which centred the PAIR and therefore left the name itself off-centre. Kept in
+   normal flow rather than absolutely positioned: at 320px an absolute corner
+   would eventually collide with the 128px centred glyph, and a layout that is
+   correct by construction beats one that needs a media query to stay correct.
+   The full, labelled uptime also remains on /system. */
+.uptime{text-align:right;color:var(--bronze);opacity:.55;font-size:11px;
+  letter-spacing:.12em;text-transform:uppercase;line-height:1;margin-bottom:2px}
 .section{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--bronze);
   margin:34px 0 12px;text-align:center;font-weight:600}
 
