@@ -1,0 +1,17 @@
+# /etc/piranesi/dashboard/allowed_signers — the BAKED trust root for lighthouse
+# dashboard updates. Same discipline as the identity-anchor's allowed_signers:
+# the TRANSPORT is never trusted, the DETACHED SIGNATURE is.
+#
+# Why a signature rather than TLS: an outpost fetches over a stranger's LAN, on a
+# board with NO RTC. TLS validation needs a correct clock (see outpost-clocksync.sh
+# and CLOCK_MIN_EPOCH), so on a cold boot the device may be unable to verify a
+# chain at all. `ssh-keygen -Y verify` has no clock dependency, which is why the
+# bundle is verified by signature and the URL may be plain HTTP if it has to be.
+#
+# Namespace: piranesi-lighthouse-dashboard  (ssh-keygen -Y -n)
+# Rotation: add the new line, ship one release signed by the OLD key that carries
+# the new allowed_signers, then retire the old line in the release after that.
+# Never remove the only usable line in the same release that adds its replacement.
+#
+# principal                       key
+piranesi-lighthouse-dashboard ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMrSyVXy0k3DmtXUX3xoazZp44NQ1FDvILbO/tHpOs2F lighthouse-dashboard-release@piranesi

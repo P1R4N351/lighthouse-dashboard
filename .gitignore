@@ -1,0 +1,3 @@
+dist/*.partial
+.DS_Store
+._*
