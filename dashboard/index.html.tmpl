@@ -10,8 +10,9 @@
 <div class="uptime">up {{UPTIME}}</div>
 <a class="logo" href="/system" aria-label="Piranesi" title="Piranesi"><svg viewBox="13 20 60 60" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 39 L43 28 L63 39"/><path d="M30 45 L30 69"/><path d="M43 45 L43 69"/><path d="M56 45 L56 69"/><path d="M19 72 L67 72"/></svg></a>
 <div class="host">{{DESIGNATION}}</div>
-<h2 class="section">Services</h2>
+<h2 class="section">Network</h2>
 <div class="grid">{{SERVICES}}</div>
+{{HOUSE_SECTION}}
 {{AMENITIES_SECTION}}
 <p class="foot">Courtesy services only. This device stores nothing about your
 traffic and answers to nobody on this network.</p>
@@ -267,7 +268,7 @@ tick();
 var tries = 0;
 var iv = setInterval(function(){
   tries += 1;
-  var list = document.querySelector(".amen-list");
+  var list = document.getElementById("amenities");
   if (!list){ if (tries >= 40) clearInterval(iv); return; }
   clearInterval(iv);
   var head = list.previousElementSibling;
