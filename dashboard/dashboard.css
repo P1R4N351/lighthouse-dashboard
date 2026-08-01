@@ -6,9 +6,11 @@
  *
  * Constraint that shaped it: this is served by a python stdlib HTTP server on a
  * 2 GB SD-only Le Potato to strangers on a foreign LAN. No webfonts, no external
- * requests, no JS. Everything renders from the single inlined stylesheet, which
- * is why the House's runtime-driven bits (clock, live search, folder popovers)
- * are deliberately absent rather than ported.
+ * requests. One deliberate JS exception since 2026-07-31: the inline,
+ * dependency-free sun-engine in index.html.tmpl (realtime solar arc + noon
+ * alignment, shared with the House homepage); with scripts blocked the page
+ * degrades to exactly the static night view. The House's other runtime-driven
+ * bits (clock, live search, folder popovers) remain deliberately absent.
  *
  * Authored-by: CPCS
  */
@@ -121,3 +123,63 @@ a.back{color:var(--bronze);text-decoration:none;font-size:13px}
 /* Inline live value beside an amenity (the Doomsday Clock setting).
    Refreshed daily by the lighthouse itself, never on page view. */
 .amen-val{margin-left:8px;font-size:12px;font-weight:500;color:var(--bronze);letter-spacing:.02em;white-space:nowrap}
+
+/* ── sun-engine v5 — daylight sun + solar-noon alignment ─────────────────────
+   A soft-blurred sun rides today's solar curve, invisible path, edge-to-edge:
+   sunrise at the left page edge, sunset at the right, apex pinned to the House
+   glyph; at true solar noon it docks there — glyph goes white, gold spills,
+   beams flare, then dissipate. The sun's shade grades with altitude (ember at
+   the horizon through amber to near-white aloft) and the sky answers it: a
+   daylight veil lifts the navy as the sun climbs, a warm blush hugs it when
+   it is low. Night is untouched. This block is
+   byte-identical in the 8088 homepage and the lighthouse dashboard.css — edit
+   both together. Authored-by: CPCS */
+:root{--noonk:0;color-scheme:dark}
+.sunsky{position:fixed;inset:0;z-index:0;pointer-events:none}
+.sunsky svg{width:100%;height:100%;display:block;filter:blur(5px)}
+.skyday{position:absolute;inset:0;opacity:0;
+  background:linear-gradient(180deg,rgba(99,144,222,.46),
+    rgba(72,112,182,.24) 46%,rgba(44,74,134,.07) 78%,transparent)}
+.skyglow{position:absolute;border-radius:50%;transform:translate(-50%,-50%);opacity:0;
+  background:radial-gradient(closest-side,rgba(255,138,76,.46),
+    rgba(238,108,84,.22) 46%,transparent 72%)}
+.sunwash{position:fixed;z-index:2;pointer-events:none;border-radius:50%;
+  transform:translate(-50%,-50%);opacity:0;opacity:calc(var(--noonk)*.5);
+  background:radial-gradient(closest-side,rgba(255,247,226,.5),
+    rgba(246,200,119,.22) 42%,transparent 72%)}
+.rays{position:absolute;left:50%;top:50%;width:330px;height:330px;z-index:0;
+  pointer-events:none;transform:translate(-50%,-50%);
+  opacity:0;opacity:calc(var(--noonk)*var(--noonk));
+  background:
+    repeating-conic-gradient(from 4deg,rgba(255,249,232,.42) 0deg 2.4deg,
+      transparent 6deg 30deg),
+    repeating-conic-gradient(from 19deg,rgba(246,200,119,.30) 0deg 1.6deg,
+      transparent 5deg 30deg);
+  -webkit-mask:radial-gradient(closest-side,transparent 16%,#000 32%,transparent 74%);
+  mask:radial-gradient(closest-side,transparent 16%,#000 32%,transparent 74%);
+  filter:blur(1.5px)}
+@media(prefers-reduced-motion:no-preference){
+  .rays{animation:sunspin 240s linear infinite}}
+@keyframes sunspin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+/* the glyph at noon: white-hot with gold spill; every declaration here has a
+   safe predecessor in the base .logo rules, so an engine that cannot parse
+   color-mix or calc() inside rgba() falls back to the untouched night glyph */
+.logo svg{transition:color 1.2s ease}
+.logo svg{color:color-mix(in srgb,#fff calc(var(--noonk)*100%),#EAD0A6)}
+.logo svg{filter:drop-shadow(0 0 11px rgba(224,178,120,.78))
+  drop-shadow(0 2px 3px rgba(0,0,0,.45))
+  drop-shadow(0 0 calc(var(--noonk)*30px) rgba(255,243,208,calc(var(--noonk)*.9)))}
+.logo::after{content:"";position:absolute;inset:-24%;border-radius:50%;z-index:0;
+  pointer-events:none;opacity:var(--noonk);
+  background:radial-gradient(closest-side,rgba(255,248,228,.85),
+    rgba(246,200,119,.42) 45%,rgba(246,200,119,.10) 70%,transparent 82%);
+  transform:scale(calc(.72 + var(--noonk)*.42))}
+.noonflash{position:absolute;left:50%;top:50%;width:130px;height:130px;z-index:0;
+  pointer-events:none;border-radius:50%;transform:translate(-50%,-50%);
+  box-shadow:0 0 0 2px rgba(255,250,235,.9),0 0 40px 12px rgba(255,244,214,.8);
+  animation:noonflash 2.6s cubic-bezier(.16,.8,.3,1) forwards}
+@keyframes noonflash{from{transform:translate(-50%,-50%) scale(.4);opacity:1}
+  to{transform:translate(-50%,-50%) scale(3.4);opacity:0}}
+@media(prefers-reduced-motion:reduce){
+  .rays{animation:none}.noonflash{animation:none;opacity:0}}
+/* ── end sun-engine v5 ─────────────────────────────────────────────────── */
