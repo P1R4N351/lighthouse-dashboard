@@ -17,7 +17,7 @@
 traffic and answers to nobody on this network.</p>
 <p class="stamp">{{DASHBOARD_LINE}}</p>
 </div><script>
-/* ── sun-engine v5 — realtime sun on today's solar arc, apex = House glyph.
+/* ── sun-engine v6 — realtime sun on today's solar arc, apex = House glyph.
    NOAA general solar equations (sub-minute). The path itself is invisible and
    spans the page edge-to-edge: sunrise at the left edge, sunset at the right;
    only the sun shows, drawn 1:1 in CSS pixels (no viewBox, so nothing ever
@@ -165,14 +165,20 @@ function layout(){
   if (!day){ geo = null; return; }
   var r = logo.getBoundingClientRect();
   if (!r.width){ geo = null; return; }
-  var apex = { x: r.left + r.width/2, y: r.top + r.height/2 };
-  var vw = sky.clientWidth, vh = sky.clientHeight;
+  /* document coordinates: the layer is position:absolute, so the sun is
+     pinned to the glyph itself, not the viewport — scrolling moves both */
+  var apex = { x: r.left + window.scrollX + r.width/2,
+               y: r.top + window.scrollY + r.height/2 };
+  var vw = document.documentElement.clientWidth;
+  var vh = document.documentElement.clientHeight;
   var H = Math.min(vh*.52, 120 + 260*Math.sin(day.maxAlt*RAD));
-  var p0 = { x: 0,  y: apex.y + H };
-  var p2 = { x: vw, y: apex.y + H };
+  var horizon = apex.y + H;
+  var p0 = { x: 0,  y: horizon };
+  var p2 = { x: vw, y: horizon };
   var c  = { x: 2*apex.x - (p0.x+p2.x)/2, y: 2*apex.y - (p0.y+p2.y)/2 };
   geo = { p0:p0, p2:p2, c:c, apex:apex };
-  svg.setAttribute("width", vw); svg.setAttribute("height", vh);
+  sky.style.width = vw + "px"; sky.style.height = (horizon + 80) + "px";
+  svg.setAttribute("width", vw); svg.setAttribute("height", horizon + 80);
   wash.style.left = apex.x + "px"; wash.style.top = apex.y + "px";
   var wd = Math.max(vw, vh)*1.5;
   wash.style.width = wd + "px"; wash.style.height = wd + "px";
@@ -251,6 +257,43 @@ window.addEventListener("resize", function(){ clearTimeout(rsz); rsz = setTimeou
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) tick(); });
 tick();
 })();
-/* ── end sun-engine v5 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v6 ─────────────────────────────────────────────────── */
+
+/* amenities drop-down — the heading toggles the list on both surfaces
+   (homepage builds its list async, hence the bounded poll). Default closed,
+   the choice is remembered. Authored-by: CPCS */
+(function(){
+"use strict";
+var tries = 0;
+var iv = setInterval(function(){
+  tries += 1;
+  var list = document.querySelector(".amen-list");
+  if (!list){ if (tries >= 40) clearInterval(iv); return; }
+  clearInterval(iv);
+  var head = list.previousElementSibling;
+  if (!head || head.tagName !== "H2") return;
+  var open = false;
+  try { open = localStorage.getItem("ph_amen_open") === "1"; } catch (e) { /* default closed */ }
+  var chev = document.createElement("span");
+  chev.className = "chev"; chev.textContent = "\u25B8";
+  head.appendChild(chev);
+  head.classList.add("amen-toggle");
+  head.setAttribute("role", "button"); head.setAttribute("tabindex", "0");
+  function apply(){
+    head.setAttribute("aria-expanded", open ? "true" : "false");
+    list.classList.toggle("amen-collapsed", !open);
+  }
+  function flip(){
+    open = !open;
+    try { localStorage.setItem("ph_amen_open", open ? "1" : "0"); } catch (e) { /* not persisted */ }
+    apply();
+  }
+  head.addEventListener("click", flip);
+  head.addEventListener("keydown", function(k){
+    if (k.key === "Enter" || k.key === " "){ k.preventDefault(); flip(); }
+  });
+  apply();
+}, 300);
+})();
 </script>
 </body></html>

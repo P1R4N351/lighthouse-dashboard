@@ -124,7 +124,7 @@ a.back{color:var(--bronze);text-decoration:none;font-size:13px}
    Refreshed daily by the lighthouse itself, never on page view. */
 .amen-val{margin-left:8px;font-size:12px;font-weight:500;color:var(--bronze);letter-spacing:.02em;white-space:nowrap}
 
-/* ── sun-engine v5 — daylight sun + solar-noon alignment ─────────────────────
+/* ── sun-engine v6 — daylight sun + solar-noon alignment ─────────────────────
    A soft-blurred sun rides today's solar curve, invisible path, edge-to-edge:
    sunrise at the left page edge, sunset at the right, apex pinned to the House
    glyph; at true solar noon it docks there — glyph goes white, gold spills,
@@ -135,7 +135,12 @@ a.back{color:var(--bronze);text-decoration:none;font-size:13px}
    byte-identical in the 8088 homepage and the lighthouse dashboard.css — edit
    both together. Authored-by: CPCS */
 :root{--noonk:0;color-scheme:dark}
-.sunsky{position:fixed;inset:0;z-index:0;pointer-events:none}
+/* the glyph's stroke is defined in SCREEN pixels, so no page scale, hover
+   scale, or future resize can thicken or thin the mark */
+.logo svg path{vector-effect:non-scaling-stroke;stroke-width:9px}
+/* the sky layer lives in DOCUMENT space, anchored to the glyph — scroll and
+   the sun, its light and its alignment all travel with the page */
+.sunsky{position:absolute;left:0;top:0;z-index:0;pointer-events:none;overflow:hidden}
 .sunsky svg{width:100%;height:100%;display:block;filter:blur(5px)}
 .skyday{position:absolute;inset:0;opacity:0;
   background:linear-gradient(180deg,rgba(99,144,222,.46),
@@ -143,7 +148,7 @@ a.back{color:var(--bronze);text-decoration:none;font-size:13px}
 .skyglow{position:absolute;border-radius:50%;transform:translate(-50%,-50%);opacity:0;
   background:radial-gradient(closest-side,rgba(255,138,76,.46),
     rgba(238,108,84,.22) 46%,transparent 72%)}
-.sunwash{position:fixed;z-index:2;pointer-events:none;border-radius:50%;
+.sunwash{position:absolute;z-index:2;pointer-events:none;border-radius:50%;
   transform:translate(-50%,-50%);opacity:0;opacity:calc(var(--noonk)*.5);
   background:radial-gradient(closest-side,rgba(255,247,226,.5),
     rgba(246,200,119,.22) 42%,transparent 72%)}
@@ -182,4 +187,10 @@ a.back{color:var(--bronze);text-decoration:none;font-size:13px}
   to{transform:translate(-50%,-50%) scale(3.4);opacity:0}}
 @media(prefers-reduced-motion:reduce){
   .rays{animation:none}.noonflash{animation:none;opacity:0}}
-/* ── end sun-engine v5 ─────────────────────────────────────────────────── */
+/* amenities as a drop-down: the heading is the toggle */
+.amen-toggle{cursor:pointer;user-select:none;-webkit-user-select:none}
+.amen-toggle .chev{display:inline-block;margin-left:7px;
+  transition:transform .2s ease}
+.amen-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.amen-collapsed{display:none}
+/* ── end sun-engine v6 ─────────────────────────────────────────────────── */
