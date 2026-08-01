@@ -17,7 +17,7 @@
 traffic and answers to nobody on this network.</p>
 <p class="stamp">{{DASHBOARD_LINE}}</p>
 </div><script>
-/* ── sun-engine v8 — realtime sun on today's solar arc, apex = House glyph.
+/* ── sun-engine v9 — realtime sun on today's solar arc, apex = House glyph.
    NOAA general solar equations (sub-minute). The path itself is invisible and
    spans the page edge-to-edge: sunrise at the left edge, sunset at the right;
    only the sun shows, drawn 1:1 in CSS pixels (no viewBox, so nothing ever
@@ -170,6 +170,13 @@ var band = el("rect"), pool = el("ellipse"), pillar = el("ellipse");
 band.setAttribute("fill","url(#duskband)");
 pool.setAttribute("fill","url(#horizonpool)");
 pillar.setAttribute("fill","url(#sunpillar)");
+/* the ground occludes: every light element is clipped at the horizon, so a
+   rising or setting sun is a half-dome standing ON the line, and no glare
+   hangs below the ground */
+var clip = el("clipPath"); clip.setAttribute("id", "abovehorizon");
+var clipRect = el("rect");
+clipRect.setAttribute("x", 0); clipRect.setAttribute("y", 0);
+clip.appendChild(clipRect); defs.appendChild(clip);
 var halo = el("circle"), glow = el("circle"), core = el("circle");
 halo.setAttribute("fill","url(#sunhalo)");
 glow.setAttribute("fill","url(#sunglow)"); core.setAttribute("fill","url(#suncore)");
@@ -177,6 +184,9 @@ glow.setAttribute("fill","url(#sunglow)"); core.setAttribute("fill","url(#suncor
    engines without blend modes just paint normally — still fine */
 var lit = [band, pool, pillar, halo, glow];
 for (var li = 0; li < lit.length; li++) lit[li].setAttribute("style","mix-blend-mode:screen");
+var grounded = [pool, pillar, halo, glow, core];
+for (var gi = 0; gi < grounded.length; gi++)
+  grounded[gi].setAttribute("clip-path","url(#abovehorizon)");
 svg.append(defs, band, pool, pillar, halo, glow, core);
 var rays = document.createElement("span");
 rays.className = "rays"; rays.setAttribute("aria-hidden","true");
@@ -203,6 +213,7 @@ function layout(){
   geo = { p0:p0, p2:p2, c:c, apex:apex };
   sky.style.width = vw + "px"; sky.style.height = (horizon + 80) + "px";
   svg.setAttribute("width", vw); svg.setAttribute("height", horizon + 80);
+  clipRect.setAttribute("width", vw); clipRect.setAttribute("height", horizon + 1);
   /* the horizon is the ground line, day and night alike: the search bar
      rests just above it, the clock sits midway between glyph and search,
      and the icon grid begins beneath it — nothing jumps at sunrise/sunset */
@@ -294,6 +305,9 @@ function tick(){
   skyglow.style.left = p.x + "px"; skyglow.style.top = p.y + "px";
   var gd = Math.max(sky.clientWidth*1.1, 700);
   skyglow.style.width = gd + "px"; skyglow.style.height = gd + "px";
+  var underCut = Math.max(0, Math.round(p.y + gd/2 - geo.p0.y));
+  skyglow.style.clipPath = "inset(0 0 " + underCut + "px 0)";
+  skyglow.style.webkitClipPath = skyglow.style.clipPath;
 
   /* dawn/dusk: twilight band off the horizon, glow pooled at the sun's
      station, a light pillar standing on the line — all only when low */
@@ -341,7 +355,7 @@ window.addEventListener("resize", function(){ clearTimeout(rsz); rsz = setTimeou
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) tick(); });
 tick();
 })();
-/* ── end sun-engine v8 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v9 ─────────────────────────────────────────────────── */
 
 /* amenities drop-down — the heading toggles the list on both surfaces
    (homepage builds its list async, hence the bounded poll). Default closed,

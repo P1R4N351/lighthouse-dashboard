@@ -124,7 +124,7 @@ a.back{color:var(--bronze);text-decoration:none;font-size:13px}
    Refreshed daily by the lighthouse itself, never on page view. */
 .amen-val{margin-left:8px;font-size:12px;font-weight:500;color:var(--bronze);letter-spacing:.02em;white-space:nowrap}
 
-/* ── sun-engine v8 — daylight sun + solar-noon alignment ─────────────────────
+/* ── sun-engine v9 — daylight sun + solar-noon alignment ─────────────────────
    A soft-blurred sun rides today's solar curve, invisible path, edge-to-edge:
    sunrise at the left page edge, sunset at the right, apex pinned to the House
    glyph; at true solar noon it docks there — glyph goes white, gold spills,
@@ -197,4 +197,4 @@ a.back{color:var(--bronze);text-decoration:none;font-size:13px}
   transition:transform .2s ease}
 .amen-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
 .amen-collapsed{display:none}
-/* ── end sun-engine v8 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v9 ─────────────────────────────────────────────────── */

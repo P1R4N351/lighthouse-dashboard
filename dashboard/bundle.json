@@ -1,6 +1,6 @@
 {
   "schema": "piranesi.lighthouse.dashboard/1",
-  "version": 10,
-  "released": "2026-08-01T23:30:00Z",
+  "version": 11,
+  "released": "2026-08-02T00:00:00Z",
   "note": "version is a monotonic integer. The updater REFUSES a bundle whose version is not strictly greater than the one it is already serving, so a signed-but-stale artifact replayed by whoever controls the LAN cannot roll the dashboard backwards. The signed MANIFEST.json must carry the same integer as this file; a mismatch is a rejection."
 }
