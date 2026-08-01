@@ -10,15 +10,14 @@
 <div class="uptime">up {{UPTIME}}</div>
 <a class="logo" href="/system" aria-label="Piranesi" title="Piranesi"><svg viewBox="13 20 60 60" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 39 L43 28 L63 39"/><path d="M30 45 L30 69"/><path d="M43 45 L43 69"/><path d="M56 45 L56 69"/><path d="M19 72 L67 72"/></svg></a>
 <div class="host">{{DESIGNATION}}</div>
-<h2 class="section">Network</h2>
+<h2 class="section">Services</h2>
 <div class="grid">{{SERVICES}}</div>
-{{HOUSE_SECTION}}
 {{AMENITIES_SECTION}}
 <p class="foot">Courtesy services only. This device stores nothing about your
 traffic and answers to nobody on this network.</p>
 <p class="stamp">{{DASHBOARD_LINE}}</p>
 </div><script>
-/* ── sun-engine v6 — realtime sun on today's solar arc, apex = House glyph.
+/* ── sun-engine v8 — realtime sun on today's solar arc, apex = House glyph.
    NOAA general solar equations (sub-minute). The path itself is invisible and
    spans the page edge-to-edge: sunrise at the left edge, sunset at the right;
    only the sun shows, drawn 1:1 in CSS pixels (no viewBox, so nothing ever
@@ -123,10 +122,25 @@ var svg = sky.querySelector("svg");
 var skyday = document.createElement("div"), skyglow = document.createElement("div");
 skyday.className = "skyday"; skyglow.className = "skyglow";
 sky.insertBefore(skyglow, svg); sky.insertBefore(skyday, skyglow);
+var horizonEl = document.createElement("div");
+horizonEl.className = "horizon";
+sky.appendChild(horizonEl);            /* after the svg: crisp, unblurred */
 var defs = el("defs");
 /* three concentric alpha-falloff gradients — every layer fades to zero alpha,
    so the sun has no drawable rim anywhere: a blinding centre lost in its own
    bloom, the way an overexposed real sun reads */
+function lingrad(id, offs){          /* vertical, bottom to top */
+  var g = el("linearGradient"); g.setAttribute("id", id);
+  g.setAttribute("x1","0"); g.setAttribute("y1","1");
+  g.setAttribute("x2","0"); g.setAttribute("y2","0");
+  var st = [], i = 0;
+  for (; i < offs.length; i++){
+    var s = el("stop"); s.setAttribute("offset", offs[i]);
+    st.push(s); g.appendChild(s);
+  }
+  defs.appendChild(g);
+  return st;
+}
 function grad(id, offs){
   var g = el("radialGradient"); g.setAttribute("id", id);
   var st = [], i = 0;
@@ -147,14 +161,23 @@ function setStops(st, spec){
 var gHalo = grad("sunhalo", ["0%","50%","100%"]);
 var gGlow = grad("sunglow", ["0%","40%","100%"]);
 var gCore = grad("suncore", ["0%","15%","45%","100%"]);
+var gBand = lingrad("duskband", ["0%","45%","100%"]);
+var gPool = grad("horizonpool", ["0%","55%","100%"]);
+var gPillar = grad("sunpillar", ["0%","60%","100%"]);
+/* dawn/dusk furniture, painted BEHIND the sun: a twilight band rising off
+   the horizon, a glow pooling along it, a vertical light pillar */
+var band = el("rect"), pool = el("ellipse"), pillar = el("ellipse");
+band.setAttribute("fill","url(#duskband)");
+pool.setAttribute("fill","url(#horizonpool)");
+pillar.setAttribute("fill","url(#sunpillar)");
 var halo = el("circle"), glow = el("circle"), core = el("circle");
 halo.setAttribute("fill","url(#sunhalo)");
 glow.setAttribute("fill","url(#sunglow)"); core.setAttribute("fill","url(#suncore)");
-/* screen-blend the bloom so overlapping light ADDS the way light does;
+/* screen-blend the light so overlapping light ADDS the way light does;
    engines without blend modes just paint normally — still fine */
-halo.setAttribute("style","mix-blend-mode:screen");
-glow.setAttribute("style","mix-blend-mode:screen");
-svg.append(defs, halo, glow, core);
+var lit = [band, pool, pillar, halo, glow];
+for (var li = 0; li < lit.length; li++) lit[li].setAttribute("style","mix-blend-mode:screen");
+svg.append(defs, band, pool, pillar, halo, glow, core);
 var rays = document.createElement("span");
 rays.className = "rays"; rays.setAttribute("aria-hidden","true");
 
@@ -180,6 +203,36 @@ function layout(){
   geo = { p0:p0, p2:p2, c:c, apex:apex };
   sky.style.width = vw + "px"; sky.style.height = (horizon + 80) + "px";
   svg.setAttribute("width", vw); svg.setAttribute("height", horizon + 80);
+  /* the horizon is the ground line, day and night alike: the search bar
+     rests just above it, the clock sits midway between glyph and search,
+     and the icon grid begins beneath it — nothing jumps at sunrise/sunset */
+  function place(elm, targetTop){
+    var cur = parseFloat(elm.style.marginTop) || 0;
+    var base = elm.getBoundingClientRect().top + window.scrollY - cur;
+    var m = Math.round(targetTop - base);
+    if (m !== Math.round(cur)) elm.style.marginTop = m + "px";
+  }
+  var searchEl = document.querySelector(".search");
+  var clockEl = document.getElementById("clock");
+  var dateEl = document.getElementById("date");
+  if (searchEl && clockEl && dateEl){
+    var glyphBottom = r.top + window.scrollY + r.height;
+    var searchH = searchEl.getBoundingClientRect().height;
+    var searchTopT = horizon - 18 - searchH;
+    var groupH = dateEl.getBoundingClientRect().bottom
+               - clockEl.getBoundingClientRect().top;
+    var clockTopT = Math.max(glyphBottom + 4,
+      glyphBottom + ((searchTopT - glyphBottom) - groupH)/2);
+    place(clockEl, clockTopT);
+    place(searchEl, searchTopT);
+  }
+  var grid = document.querySelector(".grid");
+  if (grid){
+    var gcur = parseFloat(grid.style.marginTop) || 0;
+    var gbase = grid.getBoundingClientRect().top + window.scrollY - gcur;
+    var gneed = Math.max(0, Math.round(horizon + 26 - gbase));
+    if (gneed !== Math.round(gcur)) grid.style.marginTop = gneed + "px";
+  }
   wash.style.left = apex.x + "px"; wash.style.top = apex.y + "px";
   var wd = Math.max(vw, vh)*1.5;
   wash.style.width = wd + "px"; wash.style.height = wd + "px";
@@ -234,12 +287,42 @@ function tick(){
 
   /* the sky answers the sun: daylight veil ∝ how high it stands, warm blush
      hugging it while it is low; both ride the same rise/set edge fade */
-  skyday.style.opacity = (Math.pow(Math.max(0, Math.min(1, alt/60)), .7)*.38*edge).toFixed(3);
-  var horiz = Math.max(0, 1 - alt/16);
-  skyglow.style.opacity = (horiz*horiz*.85*edge).toFixed(3);
+  var dayA = Math.pow(Math.max(0, Math.min(1, alt/60)), .7);
+  skyday.style.opacity = (dayA*.38*edge).toFixed(3);
+  var horiz = Math.max(0, 1 - alt/16), h2 = horiz*horiz;
+  skyglow.style.opacity = (h2*.85*edge).toFixed(3);
   skyglow.style.left = p.x + "px"; skyglow.style.top = p.y + "px";
   var gd = Math.max(sky.clientWidth*1.1, 700);
   skyglow.style.width = gd + "px"; skyglow.style.height = gd + "px";
+
+  /* dawn/dusk: twilight band off the horizon, glow pooled at the sun's
+     station, a light pillar standing on the line — all only when low */
+  var vw2 = sky.clientWidth, hy = geo.p0.y;
+  band.setAttribute("x", 0); band.setAttribute("width", vw2);
+  band.setAttribute("y", hy - 190); band.setAttribute("height", 190);
+  setStops(gBand, [[edgeC, .34], ["rgb(226,110,130)", .16], ["rgb(150,110,190)", 0]]);
+  band.setAttribute("opacity", (h2*.9*edge).toFixed(3));
+  pool.setAttribute("cx", p.x); pool.setAttribute("cy", hy);
+  pool.setAttribute("rx", Math.max(360, vw2*.5)); pool.setAttribute("ry", 56);
+  setStops(gPool, [[edgeC, .55], [edgeC, .2], [edgeC, 0]]);
+  pool.setAttribute("opacity", (h2*.85*edge).toFixed(3));
+  var pk = Math.max(0, 1 - alt/9); pk = pk*pk;
+  pillar.setAttribute("cx", p.x); pillar.setAttribute("cy", hy - 105);
+  pillar.setAttribute("rx", 17); pillar.setAttribute("ry", 130);
+  setStops(gPillar, [[peak, .6], [edgeC, .25], [edgeC, 0]]);
+  pillar.setAttribute("opacity", (pk*.9*edge).toFixed(3));
+
+  /* the horizon line itself: faint and cool under a high sun, kindling
+     ember around the sun's position as it drops to meet it */
+  var sunPct = Math.round(p.x / Math.max(1, vw2) * 100);
+  var far = "rgba(190,214,255," + (.16*dayA + .10).toFixed(3) + ")";
+  var near = h2 > .02
+    ? "rgba(255,170,110," + (.25 + .6*h2).toFixed(3) + ")"
+    : "rgba(224,235,255," + (.18 + .2*dayA).toFixed(3) + ")";
+  horizonEl.style.top = hy + "px";
+  horizonEl.style.background = "linear-gradient(90deg, transparent 0%, " +
+    far + " 14%, " + near + " " + sunPct + "%, " + far + " 86%, transparent 100%)";
+  horizonEl.style.opacity = edge.toFixed(3);
 
   document.documentElement.style.setProperty("--noonk", k.toFixed(3));
   if (dNoon < 2.5 && flashedFor !== dayKey){
@@ -258,7 +341,7 @@ window.addEventListener("resize", function(){ clearTimeout(rsz); rsz = setTimeou
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) tick(); });
 tick();
 })();
-/* ── end sun-engine v6 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v8 ─────────────────────────────────────────────────── */
 
 /* amenities drop-down — the heading toggles the list on both surfaces
    (homepage builds its list async, hence the bounded poll). Default closed,
@@ -268,7 +351,7 @@ tick();
 var tries = 0;
 var iv = setInterval(function(){
   tries += 1;
-  var list = document.getElementById("amenities");
+  var list = document.querySelector(".amen-list");
   if (!list){ if (tries >= 40) clearInterval(iv); return; }
   clearInterval(iv);
   var head = list.previousElementSibling;
