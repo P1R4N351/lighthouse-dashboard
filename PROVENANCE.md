@@ -19,7 +19,10 @@ animation, and the amenity-row layout.
 
 Deliberately not carried across: the clock, the live search box, the folder
 tiles and their popovers, and `catalog.js` in its entirety. Those are
-JS-driven and the lighthouse portal serves no JavaScript at all.
+JS-driven and were not ported. Since 2026-07-31 the template carries one
+deliberate inline script — the dependency-free sun-engine (realtime solar
+arc + solar-noon glyph alignment), byte-shared with the homepage; with
+scripts blocked the page degrades to the static night view.
 
 ## The decision: a new repo seeded from the homepage, NOT `gitea fork`
 

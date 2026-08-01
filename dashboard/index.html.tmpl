@@ -4,7 +4,9 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#070F22">
 <meta name="color-scheme" content="dark">
-<style>{{STYLE}}</style></head><body><div class="desk">
+<style>{{STYLE}}</style></head><body>
+<div class="sunsky" id="sunsky" aria-hidden="true"><svg></svg></div>
+<div class="sunwash" id="sunwash" aria-hidden="true"></div><div class="desk">
 <div class="uptime">up {{UPTIME}}</div>
 <a class="logo" href="/system" aria-label="Piranesi" title="Piranesi"><svg viewBox="13 20 60 60" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 39 L43 28 L63 39"/><path d="M30 45 L30 69"/><path d="M43 45 L43 69"/><path d="M56 45 L56 69"/><path d="M19 72 L67 72"/></svg></a>
 <div class="host">{{DESIGNATION}}</div>
@@ -14,4 +16,241 @@
 <p class="foot">Courtesy services only. This device stores nothing about your
 traffic and answers to nobody on this network.</p>
 <p class="stamp">{{DASHBOARD_LINE}}</p>
-</div></body></html>
+</div><script>
+/* ── sun-engine v5 — realtime sun on today's solar arc, apex = House glyph.
+   NOAA general solar equations (sub-minute). The path itself is invisible and
+   spans the page edge-to-edge: sunrise at the left edge, sunset at the right;
+   only the sun shows, drawn 1:1 in CSS pixels (no viewBox, so nothing ever
+   stretches with window size). Coordinates default to Toronto; override with
+   localStorage ph_sun = "lat,lon". Preview any moment with ?sunat=HH:MM and
+   optionally sunday=YYYY-MM-DD. Byte-identical in the 8088 homepage and the
+   lighthouse dashboard template. The sun's shade is a piecewise altitude
+   ramp; .skyday / .skyglow tint the sky from the sun's height and position.
+   Authored-by: CPCS */
+(function(){
+"use strict";
+var RAD = Math.PI/180, DAY = 86400000, NS = "http://www.w3.org/2000/svg";
+var sky = document.getElementById("sunsky");
+var wash = document.getElementById("sunwash");
+var logo = document.querySelector(".logo");
+if (!sky || !wash || !logo) return;
+
+var lat = 43.71, lon = -79.40;                       /* Toronto */
+try {
+  var o = (localStorage.getItem("ph_sun") || "").split(",");
+  if (o.length === 2 && isFinite(+o[0]) && isFinite(+o[1])) { lat = +o[0]; lon = +o[1]; }
+} catch (e) { /* storage denied — default stands */ }
+
+var simOffset = 0;
+try {
+  var q = new URLSearchParams(location.search), at = q.get("sunat");
+  if (at && /^\d{1,2}:\d{2}$/.test(at)) {
+    var sd = q.get("sunday");
+    var base = (sd && /^\d{4}-\d{2}-\d{2}$/.test(sd)) ? new Date(sd + "T00:00:00") : new Date();
+    base.setHours(+at.split(":")[0], +at.split(":")[1], 0, 0);
+    simOffset = base.getTime() - Date.now();
+  }
+} catch (e) { simOffset = 0; }
+function now(){ return new Date(Date.now() + simOffset); }
+
+/* NOAA: equation of time (min) + declination (rad) for a local calendar day,
+   then rise / set / solar noon as Dates. null = polar day or night. */
+function solarDay(d){
+  var y = d.getFullYear(), doy = Math.floor((d - new Date(y,0,1)) / DAY);
+  var g = 2*Math.PI/365 * (doy + .5);
+  var eq = 229.18*(.000075 + .001868*Math.cos(g) - .032077*Math.sin(g)
+         - .014615*Math.cos(2*g) - .040849*Math.sin(2*g));
+  var dec = .006918 - .399912*Math.cos(g) + .070257*Math.sin(g)
+          - .006758*Math.cos(2*g) + .000907*Math.sin(2*g)
+          - .002697*Math.cos(3*g) + .00148*Math.sin(3*g);
+  var cosH = (Math.cos(90.833*RAD) - Math.sin(lat*RAD)*Math.sin(dec))
+           / (Math.cos(lat*RAD)*Math.cos(dec));
+  if (cosH < -1 || cosH > 1) return null;
+  var ha = Math.acos(cosH)/RAD;
+  var utc0 = Date.UTC(y, d.getMonth(), d.getDate());
+  return {
+    rise: new Date(utc0 + (720 - 4*(lon + ha) - eq)*60000),
+    set:  new Date(utc0 + (720 - 4*(lon - ha) - eq)*60000),
+    noon: new Date(utc0 + (720 - 4*lon - eq)*60000),
+    dec:  dec,
+    maxAlt: 90 - Math.abs(lat - dec/RAD)
+  };
+}
+function elevation(t, day){
+  var ha = (t - day.noon)/3600000*15*RAD;
+  var s = Math.sin(lat*RAD)*Math.sin(day.dec) + Math.cos(lat*RAD)*Math.cos(day.dec)*Math.cos(ha);
+  return Math.asin(Math.max(-1, Math.min(1, s)))/RAD;
+}
+
+/* colours as [r,g,b] channel arrays so every mix stays exact */
+function hexRGB(h){
+  return [parseInt(h.substr(1,2),16), parseInt(h.substr(3,2),16), parseInt(h.substr(5,2),16)];
+}
+function mixRGB(a, b, t){
+  function m(i){ return Math.round(a[i] + (b[i]-a[i])*t); }
+  return [m(0), m(1), m(2)];
+}
+function cssRGB(c){ return "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")"; }
+/* piecewise shade ramp over solar altitude in degrees */
+function shadeAt(alt, stops){
+  if (alt <= stops[0][0]) return stops[0][1];
+  var i = 1;
+  for (; i < stops.length; i++){
+    if (alt <= stops[i][0]){
+      var lo = stops[i-1], hi = stops[i];
+      return mixRGB(lo[1], hi[1], (alt - lo[0]) / (hi[0] - lo[0]));
+    }
+  }
+  return stops[stops.length-1][1];
+}
+function ramp(pairs){
+  var out = [], i = 0;
+  for (; i < pairs.length; i++) out.push([pairs[i][0], hexRGB(pairs[i][1])]);
+  return out;
+}
+var EDGE_RAMP = ramp([[0,"#E5663C"],[8,"#E8875A"],[20,"#F2B368"],[35,"#F6C877"],[55,"#FFF0CE"]]);
+var CORE_RAMP = ramp([[0,"#FFD9A6"],[15,"#FFE9C4"],[35,"#FFF6E2"],[55,"#FFFDF6"]]);
+var WHITE = [255,255,255];
+function el(name){ return document.createElementNS(NS, name); }
+function bez(t, p0, c, p2){
+  var u = 1 - t;
+  return { x: u*u*p0.x + 2*u*t*c.x + t*t*p2.x, y: u*u*p0.y + 2*u*t*c.y + t*t*p2.y };
+}
+
+/* build the sky svg once — just the sun, drawn in CSS pixels */
+var svg = sky.querySelector("svg");
+var skyday = document.createElement("div"), skyglow = document.createElement("div");
+skyday.className = "skyday"; skyglow.className = "skyglow";
+sky.insertBefore(skyglow, svg); sky.insertBefore(skyday, skyglow);
+var defs = el("defs");
+/* three concentric alpha-falloff gradients — every layer fades to zero alpha,
+   so the sun has no drawable rim anywhere: a blinding centre lost in its own
+   bloom, the way an overexposed real sun reads */
+function grad(id, offs){
+  var g = el("radialGradient"); g.setAttribute("id", id);
+  var st = [], i = 0;
+  for (; i < offs.length; i++){
+    var s = el("stop"); s.setAttribute("offset", offs[i]);
+    st.push(s); g.appendChild(s);
+  }
+  defs.appendChild(g);
+  return st;
+}
+function setStops(st, spec){
+  var i = 0;
+  for (; i < st.length; i++){
+    st[i].setAttribute("stop-color", spec[i][0]);
+    st[i].setAttribute("stop-opacity", spec[i][1]);
+  }
+}
+var gHalo = grad("sunhalo", ["0%","50%","100%"]);
+var gGlow = grad("sunglow", ["0%","40%","100%"]);
+var gCore = grad("suncore", ["0%","15%","45%","100%"]);
+var halo = el("circle"), glow = el("circle"), core = el("circle");
+halo.setAttribute("fill","url(#sunhalo)");
+glow.setAttribute("fill","url(#sunglow)"); core.setAttribute("fill","url(#suncore)");
+/* screen-blend the bloom so overlapping light ADDS the way light does;
+   engines without blend modes just paint normally — still fine */
+halo.setAttribute("style","mix-blend-mode:screen");
+glow.setAttribute("style","mix-blend-mode:screen");
+svg.append(defs, halo, glow, core);
+var rays = document.createElement("span");
+rays.className = "rays"; rays.setAttribute("aria-hidden","true");
+
+var geo = null, day = null, dayKey = "", flashedFor = "";
+function layout(){
+  var t = now();
+  var key = t.getFullYear()+"-"+t.getMonth()+"-"+t.getDate();
+  if (key !== dayKey){ day = solarDay(t); dayKey = key; }
+  if (!day){ geo = null; return; }
+  var r = logo.getBoundingClientRect();
+  if (!r.width){ geo = null; return; }
+  var apex = { x: r.left + r.width/2, y: r.top + r.height/2 };
+  var vw = sky.clientWidth, vh = sky.clientHeight;
+  var H = Math.min(vh*.52, 120 + 260*Math.sin(day.maxAlt*RAD));
+  var p0 = { x: 0,  y: apex.y + H };
+  var p2 = { x: vw, y: apex.y + H };
+  var c  = { x: 2*apex.x - (p0.x+p2.x)/2, y: 2*apex.y - (p0.y+p2.y)/2 };
+  geo = { p0:p0, p2:p2, c:c, apex:apex };
+  svg.setAttribute("width", vw); svg.setAttribute("height", vh);
+  wash.style.left = apex.x + "px"; wash.style.top = apex.y + "px";
+  var wd = Math.max(vw, vh)*1.5;
+  wash.style.width = wd + "px"; wash.style.height = wd + "px";
+}
+
+function tick(){
+  layout();
+  var t = now();
+  if (!day || !geo || t < day.rise || t > day.set){
+    sky.style.display = "none";
+    document.documentElement.style.setProperty("--noonk", "0");
+    if (rays.parentNode) rays.remove();
+    return schedule(300);
+  }
+  sky.style.display = "";
+  if (!rays.parentNode) logo.appendChild(rays);
+
+  var u = (t - day.rise)/(day.set - day.rise);
+  var p = bez(u, geo.p0, geo.c, geo.p2);
+  var alt = elevation(t, day);
+  var a = Math.max(0, Math.min(1, alt/25));                /* horizon → high */
+  var dNoon = Math.abs(t - day.noon)/1000;
+  var ramp = Math.max(0, 1 - dNoon/480);
+  var k = ramp*ramp;                                       /* noon intensity */
+
+  /* disc: ember near the horizon, gold aloft; fades into the glyph at noon */
+  var edge = Math.max(0, Math.min(1, (t - day.rise)/1500000))
+           * Math.max(0, Math.min(1, (day.set - t)/1500000));
+  var vis = edge * (1 - .85*k);
+  var rCore = 80 + 14*(1 - a), rGlow = 210 + 35*(1 - a), rHalo = 430 + 60*(1 - a);
+  var i = 0, discs = [[halo, rHalo], [glow, rGlow], [core, rCore]];
+  for (; i < 3; i++){
+    discs[i][0].setAttribute("cx", p.x);
+    discs[i][0].setAttribute("cy", p.y);
+    discs[i][0].setAttribute("r", discs[i][1]);
+  }
+  var cCore = shadeAt(alt, CORE_RAMP), cEdge = shadeAt(alt, EDGE_RAMP);
+  /* overexposure scales with altitude: at the horizon the sun is a readable
+     ember disc; aloft the centre blows out to white inside its own glare */
+  var peak = cssRGB(mixRGB(cCore, WHITE, .35 + .65*a));
+  var coreC = cssRGB(cCore), edgeC = cssRGB(cEdge);
+  /* nucleus: a small, genuinely bright point — solid to 70%, then gone; the
+     bloom layers around it carry the size. Steep falloff, not fog. */
+  /* continuous gaussian-like decay from a tiny centre — brightness has no
+     plateau and therefore no rim; the circle is lost inside its own light */
+  setStops(gCore, [["#FFFFFF", 1], ["#FFFFFF", .92], [peak, .48], [edgeC, 0]]);
+  setStops(gGlow, [["#FFFFFF", .55], [peak, .28], [edgeC, 0]]);
+  setStops(gHalo, [[coreC, .32], [edgeC, .12], [edgeC, 0]]);
+  halo.setAttribute("opacity", (vis*(.5 + .35*a)).toFixed(3));
+  glow.setAttribute("opacity", (vis*.95).toFixed(3));
+  core.setAttribute("opacity", vis.toFixed(3));
+
+  /* the sky answers the sun: daylight veil ∝ how high it stands, warm blush
+     hugging it while it is low; both ride the same rise/set edge fade */
+  skyday.style.opacity = (Math.pow(Math.max(0, Math.min(1, alt/60)), .7)*.38*edge).toFixed(3);
+  var horiz = Math.max(0, 1 - alt/16);
+  skyglow.style.opacity = (horiz*horiz*.85*edge).toFixed(3);
+  skyglow.style.left = p.x + "px"; skyglow.style.top = p.y + "px";
+  var gd = Math.max(sky.clientWidth*1.1, 700);
+  skyglow.style.width = gd + "px"; skyglow.style.height = gd + "px";
+
+  document.documentElement.style.setProperty("--noonk", k.toFixed(3));
+  if (dNoon < 2.5 && flashedFor !== dayKey){
+    flashedFor = dayKey;
+    var f = document.createElement("span");
+    f.className = "noonflash"; f.setAttribute("aria-hidden","true");
+    logo.appendChild(f);
+    setTimeout(function(){ f.remove(); }, 2800);
+  }
+  schedule(dNoon < 720 ? 1 : 30);
+}
+var timer = 0;
+function schedule(sec){ clearTimeout(timer); timer = setTimeout(tick, sec*1000); }
+var rsz = 0;
+window.addEventListener("resize", function(){ clearTimeout(rsz); rsz = setTimeout(tick, 150); });
+document.addEventListener("visibilitychange", function(){ if (!document.hidden) tick(); });
+tick();
+})();
+/* ── end sun-engine v5 ─────────────────────────────────────────────────── */
+</script>
+</body></html>
