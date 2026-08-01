@@ -52,6 +52,11 @@ parse_args() {
   done
   [[ -n "${SRC}" && -n "${OUT}" ]] || die "--src and --out are required"
   [[ -d "${SRC}" ]] || die "--src is not a directory: ${SRC}"
+  # Absolutize both: the pack step runs from inside the mktemp staging dir, so a
+  # relative --out would resolve in there and tar would die with exit 4.
+  SRC="$(cd "${SRC}" && pwd -P)" || die "could not resolve --src: ${SRC}" 4
+  mkdir -p "${OUT}" || die "could not create ${OUT}" 4
+  OUT="$(cd "${OUT}" && pwd -P)" || die "could not resolve --out: ${OUT}" 4
   [[ -z "${VERSION}" || "${VERSION}" =~ ^[0-9]{1,9}$ ]] || die "--version must be an integer"
   [[ -z "${KEY}" || -f "${KEY}" ]] || die "--key not found: ${KEY}" 3
   return 0
@@ -151,7 +156,6 @@ main() {
       "${SRC}/bundle.json")" || die "could not read the source version" 4
   fi
   released="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  mkdir -p "${OUT}" || die "could not create ${OUT}" 4
   STAGE_DIR="$(mktemp -d)" || die "mktemp failed" 3
   # R1: the trap only ever removes this script's own mktemp -d staging dir.
   trap '[[ -n "${STAGE_DIR}" ]] && rm -rf "${STAGE_DIR}"' EXIT INT TERM

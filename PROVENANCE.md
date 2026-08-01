@@ -9,7 +9,7 @@ This repo's visual language comes from **The House of Piranesi** homepage:
 | upstream repo | `piranesi/homepage` on gitea `100.72.144.19:18792` |
 | upstream commit at seeding | `771480f5f0a0c8dcb742f5cc3b8550470d69f188` (2026-07-29) |
 | files the design was taken from | `index.html` (the `:root` token block, `.desk`, `.amen*`, `footer`) |
-| shared canon | `amenities.json` — byte-identical here, in the homepage repo, and baked into every lighthouse image |
+| shared canon | `amenities.json` — the homepage repo owns it and the image bakes it verbatim; **this repo carries the public mirror**: canon minus every mesh-private row (see the file's own `provenance` field, and "the mirror is a subset" below) |
 
 Inherited verbatim: the `:root` custom properties (`--ink`, `--muted`, `--glass`,
 `--glass-edge`, `--bronze` `#E0B278`, the SF font stack), the layered
@@ -64,9 +64,32 @@ Seeding loses the automatic `git merge upstream/main` path, so the lineage is
 recorded instead of implied:
 
 * the upstream repo and the exact commit are pinned at the top of this file;
-* `amenities.json` is asserted byte-identical to the homepage's copy by
-  `armbian-seed/tests/smoke.sh` — the same drift guard the image already had;
+* `amenities.json` is guarded on BOTH of its relations by
+  `armbian-seed/tests/smoke.sh` — see "the mirror is a subset" below;
 * `dashboard/dashboard.css` names its origin in its header comment.
+
+### The mirror is a subset, not a copy
+
+This file used to say `amenities.json` was "byte-identical here, in the homepage
+repo, and baked into every lighthouse image". That was never true and was never
+meant to be — and because nothing tested this repo's copy, nothing said so. On
+2026-08-01 the three files had three distinct md5s. The real relation is a
+ladder of two links, and `armbian-seed/tests/smoke.sh` now asserts both:
+
+| link | assertion |
+|---|---|
+| homepage canon → baked image copy | byte-identical (`amenities canon identical`) |
+| homepage canon → **this repo** | canon minus exactly the mesh-private rows (`amenities mirror == canon minus exactly the mesh-private entries`), plus a leak gate (`amenities mirror carries no tailnet/onion address`) |
+
+The second link is deliberately anchored to canon rather than to the image, so a
+lagging re-bake cannot move the mirror's contract. What the mirror may withhold
+is bounded: a row or a whole block may be dropped only if every URL under it is
+mesh-private (`.onion`, `*.ts.net`, RFC1918, or CGNAT/tailnet `100.64/10`). It
+may not drop anything public, may not carry a row canon lacks, may not let a
+shared row drift, and may not invent fields. Only `provenance` is free to
+differ, because each copy has to explain what *it* is. Withholding the
+`services` block in full (House Cinema, Audiobooks, the standing invitation —
+every URL mesh-private) is exactly the case this permits.
 
 When the House's visual language changes, diff `index.html`'s `:root` block
 against `dashboard/dashboard.css` and port the tokens by hand. That is a

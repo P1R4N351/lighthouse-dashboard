@@ -120,10 +120,6 @@ a.back{color:var(--bronze);text-decoration:none;font-size:13px}
 @media(prefers-reduced-motion:reduce){.logo::before{animation:none}}
 .sysline{max-width:56ch;margin:0 auto 10px;text-align:center;color:var(--muted);line-height:1.55}
 
-/* Inline live value beside an amenity (the Doomsday Clock setting).
-   Refreshed daily by the lighthouse itself, never on page view. */
-.amen-val{margin-left:8px;font-size:12px;font-weight:500;color:var(--bronze);letter-spacing:.02em;white-space:nowrap}
-
 /* ── sun-engine v6 — daylight sun + solar-noon alignment ─────────────────────
    A soft-blurred sun rides today's solar curve, invisible path, edge-to-edge:
    sunrise at the left page edge, sunset at the right, apex pinned to the House
@@ -194,3 +190,23 @@ a.back{color:var(--bronze);text-decoration:none;font-size:13px}
 .amen-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
 .amen-collapsed{display:none}
 /* ── end sun-engine v6 ─────────────────────────────────────────────────── */
+/* Live counters and the invitation row, mirroring the portal's built-in CSS so
+   a bundled board and a built-in board render the same page. tabular-nums is
+   load-bearing: a count ticking in a proportional face jitters the row. */
+.amen-live{color:var(--bronze);font-variant-numeric:tabular-nums;
+font-feature-settings:"tnum" 1;letter-spacing:.01em}
+/* .amen-val is NOT dead, and deleting it once already broke a live board. The
+   newer portal puts a live value in the DESCRIPTION slot as .amen-live — a
+   separate flex child, where a left margin would mean nothing. The portal
+   vintage actually INSTALLED on boards still emits <span class="amen-val">
+   INSIDE the name, and leans on this margin to hold it off: without the rule it
+   renders "Doomsday Clock89 seconds to midnight".
+   A bundle is served to whatever portal happens to be installed, and during a
+   staged rollout the two versions are deliberately independent — so this file
+   has to dress BOTH vintages, and keeps this rule until no board runs the older
+   one. The spacing belongs here, on the nested span; do not "fix" it by putting
+   a margin on .amen-live instead. */
+.amen-val{margin-left:8px;font-size:12px;font-weight:500;color:var(--bronze);letter-spacing:.02em;white-space:nowrap}
+.amen-join .amen-icon{color:var(--bronze);background:rgba(224,178,120,.14);
+border-color:rgba(224,178,120,.35)}
+.amen-join .amen-icon svg{width:30px;height:30px}
