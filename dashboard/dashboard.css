@@ -143,7 +143,7 @@ font-feature-settings:"tnum" 1;letter-spacing:.01em}
 border-color:rgba(224,178,120,.35)}
 .amen-join .amen-icon svg{width:30px;height:30px}
 
-/* ── sun-engine v10 — daylight sun + solar-noon alignment ─────────────────────
+/* ── sun-engine v11 — daylight sun + solar-noon alignment ─────────────────────
    A soft-blurred sun rides today's solar curve, invisible path, edge-to-edge:
    sunrise at the left page edge, sunset at the right, apex pinned to the House
    glyph; at true solar noon it docks there — glyph goes white, gold spills,
@@ -206,14 +206,14 @@ border-color:rgba(224,178,120,.35)}
   to{transform:translate(-50%,-50%) scale(3.4);opacity:0}}
 @media(prefers-reduced-motion:reduce){
   .rays{animation:none}.noonflash{animation:none;opacity:0}}
-/* the horizon: a crisp line OUTSIDE the blurred svg, so the soft sun sits
-   on a sharp edge; its colour and weight follow the sun */
+/* the horizon: a soft line living BEHIND the blur layer — part of the
+   haze, not an edge cut into it; colour and weight still follow the sun */
 .horizon{position:absolute;left:0;right:0;height:2px;pointer-events:none;
-  transform:translateY(-50%)}
+  transform:translateY(-50%);filter:blur(4px)}
 /* amenities as a drop-down: the heading is the toggle */
 .amen-toggle{cursor:pointer;user-select:none;-webkit-user-select:none}
 .amen-toggle .chev{display:inline-block;margin-left:7px;
   transition:transform .2s ease}
 .amen-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
 .amen-collapsed{display:none}
-/* ── end sun-engine v10 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v11 ─────────────────────────────────────────────────── */

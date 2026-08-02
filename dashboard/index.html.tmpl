@@ -20,7 +20,7 @@ traffic and answers to nobody on this network.</p>
 <p class="stamp">{{DASHBOARD_LINE}}</p>
 </div>
 <script>
-/* ── sun-engine v10 — realtime sun on today's solar arc, apex = House glyph.
+/* ── sun-engine v11 — realtime sun on today's solar arc, apex = House glyph.
    NOAA general solar equations (sub-minute). The path itself is invisible and
    spans the page edge-to-edge: sunrise at the left edge, sunset at the right;
    only the sun shows, drawn 1:1 in CSS pixels (no viewBox, so nothing ever
@@ -127,7 +127,7 @@ skyday.className = "skyday"; skyglow.className = "skyglow";
 sky.insertBefore(skyglow, svg); sky.insertBefore(skyday, skyglow);
 var horizonEl = document.createElement("div");
 horizonEl.className = "horizon";
-sky.appendChild(horizonEl);            /* after the svg: crisp, unblurred */
+sky.insertBefore(horizonEl, svg);      /* under the blur layer, part of the haze */
 var defs = el("defs");
 /* three concentric alpha-falloff gradients — every layer fades to zero alpha,
    so the sun has no drawable rim anywhere: a blinding centre lost in its own
@@ -405,7 +405,7 @@ if (window.ResizeObserver){
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) tick(); });
 tick();
 })();
-/* ── end sun-engine v10 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v11 ─────────────────────────────────────────────────── */
 
 /* amenities drop-down — the heading toggles the list on both surfaces
    (homepage builds its list async, hence the bounded poll). Default closed,
