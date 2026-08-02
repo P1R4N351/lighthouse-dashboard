@@ -143,7 +143,7 @@ font-feature-settings:"tnum" 1;letter-spacing:.01em}
 border-color:rgba(224,178,120,.35)}
 .amen-join .amen-icon svg{width:30px;height:30px}
 
-/* ── sun-engine v13 — daylight sun + solar-noon alignment ─────────────────────
+/* ── sun-engine v14 — daylight sun + solar-noon alignment ─────────────────────
    A soft-blurred sun rides today's solar curve, invisible path, edge-to-edge:
    sunrise at the left page edge, sunset at the right, apex pinned to the House
    glyph; at true solar noon it docks there — glyph goes white, gold spills,
@@ -216,7 +216,7 @@ border-color:rgba(224,178,120,.35)}
   transition:transform .2s ease}
 .amen-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
 .amen-collapsed{display:none}
-/* ── end sun-engine v13 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v14 ─────────────────────────────────────────────────── */
 /* ── the keep: quests, tiles, and the lamp-lighting ─────────────────────────
    A kept service leaves the quest list and joins the shelf as a lit window:
    a 68px gradient tile in a 96px cell, the homepage idiom brought to the
