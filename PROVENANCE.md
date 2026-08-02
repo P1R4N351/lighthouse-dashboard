@@ -91,9 +91,29 @@ differ, because each copy has to explain what *it* is. Withholding the
 `services` block in full (House Cinema, Audiobooks, the standing invitation —
 every URL mesh-private) is exactly the case this permits.
 
-When the House's visual language changes, diff `index.html`'s `:root` block
-against `dashboard/dashboard.css` and port the tokens by hand. That is a
-deliberate, reviewed act, which given point 2 is the property worth having.
+When the House's visual language changes, the port across is still a
+deliberate, reviewed act by hand -- which, given point 2, is the property worth
+having. What is no longer by hand is *noticing that it did not happen*. Four
+blocks are shared with the homepage, and `armbian-seed/tests/smoke.sh` asserts
+all four against canon on BOTH sides -- never the baked image, so a lagging
+re-bake cannot satisfy them:
+
+| block | check | contract |
+|---|---|---|
+| sun-engine v11 CSS | `shared block: sun-css` | byte-identical inside its fences |
+| sun-engine v11 script | `shared block: sun-js` | byte-identical inside its fences |
+| `:root` design tokens | `shared block: root-tokens` | every token the homepage defines exists here with the same value; extra tokens here are allowed (`--faint`) |
+| body background + `body::before` vignette | `shared block: body-background` | same declared values |
+
+The last two are compared as parsed CSS rather than as bytes, because these
+copies are deliberately reformatted -- the `--sf` font stack is split over two
+lines here -- so whitespace between tokens is normalised while whitespace inside
+quoted font names is not. A vanished fence FAILS rather than matching nothing:
+an extractor that quietly finds zero bytes is a drift guard that has stopped
+guarding.
+
+The sentence this paragraph replaced asked a human to run that diff. Nobody was
+scheduled to.
 
 ## Trust root
 
