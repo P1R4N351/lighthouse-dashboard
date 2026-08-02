@@ -6,18 +6,21 @@
 <meta name="color-scheme" content="dark">
 <style>{{STYLE}}</style></head><body>
 <div class="sunsky" id="sunsky" aria-hidden="true"><svg></svg></div>
-<div class="sunwash" id="sunwash" aria-hidden="true"></div><div class="desk">
+<div class="sunwash" id="sunwash" aria-hidden="true"></div>
+<div class="desk">
 <div class="uptime">up {{UPTIME}}</div>
 <a class="logo" href="/system" aria-label="Piranesi" title="Piranesi"><svg viewBox="13 20 60 60" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 39 L43 28 L63 39"/><path d="M30 45 L30 69"/><path d="M43 45 L43 69"/><path d="M56 45 L56 69"/><path d="M19 72 L67 72"/></svg></a>
 <div class="host">{{DESIGNATION}}</div>
-<h2 class="section">Services</h2>
+<h2 class="section">Network</h2>
 <div class="grid">{{SERVICES}}</div>
+{{HOUSE_SECTION}}
 {{AMENITIES_SECTION}}
 <p class="foot">Courtesy services only. This device stores nothing about your
 traffic and answers to nobody on this network.</p>
 <p class="stamp">{{DASHBOARD_LINE}}</p>
-</div><script>
-/* ── sun-engine v9 — realtime sun on today's solar arc, apex = House glyph.
+</div>
+<script>
+/* ── sun-engine v10 — realtime sun on today's solar arc, apex = House glyph.
    NOAA general solar equations (sub-minute). The path itself is invisible and
    spans the page edge-to-edge: sunrise at the left edge, sunset at the right;
    only the sun shows, drawn 1:1 in CSS pixels (no viewBox, so nothing ever
@@ -177,6 +180,9 @@ var clip = el("clipPath"); clip.setAttribute("id", "abovehorizon");
 var clipRect = el("rect");
 clipRect.setAttribute("x", 0); clipRect.setAttribute("y", 0);
 clip.appendChild(clipRect); defs.appendChild(clip);
+var clipB = el("clipPath"); clipB.setAttribute("id", "belowhorizon");
+var clipBRect = el("rect"); clipBRect.setAttribute("x", 0);
+clipB.appendChild(clipBRect); defs.appendChild(clipB);
 var halo = el("circle"), glow = el("circle"), core = el("circle");
 halo.setAttribute("fill","url(#sunhalo)");
 glow.setAttribute("fill","url(#sunglow)"); core.setAttribute("fill","url(#suncore)");
@@ -187,7 +193,22 @@ for (var li = 0; li < lit.length; li++) lit[li].setAttribute("style","mix-blend-
 var grounded = [pool, pillar, halo, glow, core];
 for (var gi = 0; gi < grounded.length; gi++)
   grounded[gi].setAttribute("clip-path","url(#abovehorizon)");
-svg.append(defs, band, pool, pillar, halo, glow, core);
+/* the floor: a contact shadow grounding the line, the sun's glow mirrored
+   onto the surface, and a glitter path running from the sun's station on
+   the horizon down toward the viewer — light spilling across the land */
+var gShade = lingrad("groundshade", ["0%","55%","100%"]);
+var gFloorGlow = grad("floorglow", ["0%","55%","100%"]);
+var gGlitter = lingrad("glitter", ["0%","60%","100%"]);
+var shade = el("rect"), floorGlow = el("ellipse"), glitter = el("polygon");
+shade.setAttribute("fill","url(#groundshade)");
+floorGlow.setAttribute("fill","url(#floorglow)");
+glitter.setAttribute("fill","url(#glitter)");
+floorGlow.setAttribute("style","mix-blend-mode:screen");
+glitter.setAttribute("style","mix-blend-mode:screen");
+var floored = [shade, floorGlow, glitter];
+for (var fi = 0; fi < floored.length; fi++)
+  floored[fi].setAttribute("clip-path","url(#belowhorizon)");
+svg.append(defs, band, pool, pillar, halo, glow, core, shade, floorGlow, glitter);
 var rays = document.createElement("span");
 rays.className = "rays"; rays.setAttribute("aria-hidden","true");
 
@@ -211,9 +232,12 @@ function layout(){
   var p2 = { x: vw, y: horizon };
   var c  = { x: 2*apex.x - (p0.x+p2.x)/2, y: 2*apex.y - (p0.y+p2.y)/2 };
   geo = { p0:p0, p2:p2, c:c, apex:apex };
-  sky.style.width = vw + "px"; sky.style.height = (horizon + 80) + "px";
-  svg.setAttribute("width", vw); svg.setAttribute("height", horizon + 80);
+  var ground = 420;
+  sky.style.width = vw + "px"; sky.style.height = (horizon + ground) + "px";
+  svg.setAttribute("width", vw); svg.setAttribute("height", horizon + ground);
   clipRect.setAttribute("width", vw); clipRect.setAttribute("height", horizon + 1);
+  clipBRect.setAttribute("y", horizon + 1); clipBRect.setAttribute("width", vw);
+  clipBRect.setAttribute("height", ground - 1);
   /* the horizon is the ground line, day and night alike: the search bar
      rests just above it, the clock sits midway between glyph and search,
      and the icon grid begins beneath it — nothing jumps at sunrise/sunset */
@@ -326,6 +350,24 @@ function tick(){
   setStops(gPillar, [[peak, .6], [edgeC, .25], [edgeC, 0]]);
   pillar.setAttribute("opacity", (pk*.9*edge).toFixed(3));
 
+  /* the floor answers the light: contact shadow under the line, mirrored
+     glow on the surface, glitter path spilling toward the viewer */
+  var hy2 = geo.p0.y;
+  shade.setAttribute("x", 0); shade.setAttribute("width", vw2);
+  shade.setAttribute("y", hy2); shade.setAttribute("height", 170);
+  setStops(gShade, [["rgb(4,8,20)", 0], ["rgb(4,8,20)", .12], ["rgb(4,8,20)", .42]]);
+  shade.setAttribute("opacity", edge.toFixed(3));
+  floorGlow.setAttribute("cx", p.x); floorGlow.setAttribute("cy", hy2);
+  floorGlow.setAttribute("rx", Math.max(300, vw2*.42)); floorGlow.setAttribute("ry", 105);
+  setStops(gFloorGlow, [[edgeC, .4], [edgeC, .15], [edgeC, 0]]);
+  floorGlow.setAttribute("opacity", ((h2*.6 + dayA*.14)*edge).toFixed(3));
+  var gd2 = Math.min(400, 420 - 20);
+  glitter.setAttribute("points",
+    (p.x - 12) + "," + hy2 + " " + (p.x + 12) + "," + hy2 + " " +
+    (p.x + 170) + "," + (hy2 + gd2) + " " + (p.x - 170) + "," + (hy2 + gd2));
+  setStops(gGlitter, [[edgeC, 0], [cssRGB(cCore), .18], [peak, .5]]);
+  glitter.setAttribute("opacity", ((h2*.55 + dayA*.16)*edge).toFixed(3));
+
   /* the horizon line itself: faint and cool under a high sun, kindling
      ember around the sun's position as it drops to meet it */
   var sunPct = Math.round(p.x / Math.max(1, vw2) * 100);
@@ -351,21 +393,31 @@ function tick(){
 var timer = 0;
 function schedule(sec){ clearTimeout(timer); timer = setTimeout(tick, sec*1000); }
 var rsz = 0;
-window.addEventListener("resize", function(){ clearTimeout(rsz); rsz = setTimeout(tick, 150); });
+window.addEventListener("resize", function(){
+  tick(); clearTimeout(rsz); rsz = setTimeout(tick, 180);
+});
+if (window.ResizeObserver){
+  /* content growth (catalog load, amenities toggle, fonts) re-anchors the
+     grid, search and clock to the horizon at once — no transient drift.
+     Converges: margins settle, the observer stops firing. */
+  new ResizeObserver(function(){ tick(); }).observe(document.body);
+}
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) tick(); });
 tick();
 })();
-/* ── end sun-engine v9 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v10 ─────────────────────────────────────────────────── */
 
 /* amenities drop-down — the heading toggles the list on both surfaces
    (homepage builds its list async, hence the bounded poll). Default closed,
-   the choice is remembered. Authored-by: CPCS */
+   the choice is remembered. The binding is id="amenities", NOT the first
+   .amen-list: the House-services grid is also an .amen-list and must never
+   collapse. Authored-by: CPCS */
 (function(){
 "use strict";
 var tries = 0;
 var iv = setInterval(function(){
   tries += 1;
-  var list = document.querySelector(".amen-list");
+  var list = document.getElementById("amenities");
   if (!list){ if (tries >= 40) clearInterval(iv); return; }
   clearInterval(iv);
   var head = list.previousElementSibling;
