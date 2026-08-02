@@ -22,7 +22,7 @@ traffic and answers to nobody on this network.</p>
 </div>
 
 <script>
-/* ── sun-engine v12 — realtime sun on today's solar arc, apex = House glyph.
+/* ── sun-engine v13 — realtime sun on today's solar arc, apex = House glyph.
    NOAA general solar equations (sub-minute). The path itself is invisible and
    spans the page edge-to-edge: sunrise at the left edge, sunset at the right;
    only the sun shows, drawn 1:1 in CSS pixels (no viewBox, so nothing ever
@@ -210,7 +210,12 @@ glitter.setAttribute("style","mix-blend-mode:screen");
 var floored = [shade, floorGlow, glitter];
 for (var fi = 0; fi < floored.length; fi++)
   floored[fi].setAttribute("clip-path","url(#belowhorizon)");
-svg.append(defs, band, pool, pillar, halo, glow, core, shade, floorGlow, glitter);
+/* the floor gets a heavier blur than the sky: reflections on a rough
+   surface are softer than the light that made them */
+var groundG = el("g");
+groundG.setAttribute("style","filter:blur(9px)");
+groundG.append(shade, floorGlow, glitter);
+svg.append(defs, band, pool, pillar, halo, glow, core, groundG);
 var rays = document.createElement("span");
 rays.className = "rays"; rays.setAttribute("aria-hidden","true");
 
@@ -365,19 +370,21 @@ function tick(){
   /* reflected bloom at the mirror point, smeared vertically the way rough
      surfaces smear; it drifts deep (and clips away) as the sun climbs */
   floorGlow.setAttribute("cx", p.x); floorGlow.setAttribute("cy", mirrorY);
-  floorGlow.setAttribute("rx", 150); floorGlow.setAttribute("ry", 195);
-  setStops(gFloorGlow, [[cssRGB(cCore), .5], [edgeC, .18], [edgeC, 0]]);
-  floorGlow.setAttribute("opacity", ((h2*.65 + dayA*.12)*edge).toFixed(3));
+  floorGlow.setAttribute("rx", 90); floorGlow.setAttribute("ry", 230);
+  setStops(gFloorGlow, [[cssRGB(cCore), .42], [edgeC, .16], [edgeC, 0]]);
+  floorGlow.setAttribute("opacity", ((h2*.6 + dayA*.1)*edge).toFixed(3));
   /* glitter streak: narrow at the horizon, widening toward the viewer,
      BRIGHTEST where it crosses the mirror point — the middle stop rides it */
   var gd2 = Math.min(400, 420 - 20);
+  /* a shimmer COLUMN, not a fan: reflection geometry pins its direction,
+     so the sides stay nearly parallel and dissolve before the viewer */
   glitter.setAttribute("points",
-    (p.x - 12) + "," + hy2 + " " + (p.x + 12) + "," + hy2 + " " +
-    (p.x + 150) + "," + (hy2 + gd2) + " " + (p.x - 150) + "," + (hy2 + gd2));
+    (p.x - 10) + "," + hy2 + " " + (p.x + 10) + "," + hy2 + " " +
+    (p.x + 38) + "," + (hy2 + gd2) + " " + (p.x - 38) + "," + (hy2 + gd2));
   var mOff = Math.max(.05, Math.min(.95, 1 - (mirrorY - hy2)/gd2));
   gGlitter[1].setAttribute("offset", (mOff*100).toFixed(1) + "%");
-  setStops(gGlitter, [[edgeC, .04], [peak, .42], [edgeC, .1]]);
-  glitter.setAttribute("opacity", ((h2*.55 + dayA*.14)*edge).toFixed(3));
+  setStops(gGlitter, [[edgeC, .04], [peak, .5], [edgeC, .03]]);
+  glitter.setAttribute("opacity", ((h2*.5 + dayA*.12)*edge).toFixed(3));
 
   /* the horizon line itself: faint and cool under a high sun, kindling
      ember around the sun's position as it drops to meet it */
@@ -416,7 +423,7 @@ if (window.ResizeObserver){
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) tick(); });
 tick();
 })();
-/* ── end sun-engine v12 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v13 ─────────────────────────────────────────────────── */
 
 /* amenities drop-down — the heading toggles the list on both surfaces
    (homepage builds its list async, hence the bounded poll). Default closed,
