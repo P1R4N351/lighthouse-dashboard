@@ -6,9 +6,11 @@
 <meta name="color-scheme" content="dark">
 <style>{{STYLE}}</style></head><body>
 <div class="sunsky" id="sunsky" aria-hidden="true"><svg></svg></div>
-<div class="sunwash" id="sunwash" aria-hidden="true"></div><div class="desk">
+<div class="sunwash" id="sunwash" aria-hidden="true"></div>
+
+<div class="desk">
 <div class="uptime">up {{UPTIME}}</div>
-<a class="logo" href="/system" aria-label="Piranesi" title="Piranesi"><svg viewBox="13 20 60 60" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 39 L43 28 L63 39"/><path d="M30 45 L30 69"/><path d="M43 45 L43 69"/><path d="M56 45 L56 69"/><path d="M19 72 L67 72"/></svg></a>
+<a class="logo" href="/about" aria-label="Piranesi" title="Piranesi"><svg viewBox="13 20 60 60" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 39 L43 28 L63 39"/><path d="M30 45 L30 69"/><path d="M43 45 L43 69"/><path d="M56 45 L56 69"/><path d="M19 72 L67 72"/></svg></a>
 <div class="host">{{DESIGNATION}}</div>
 <h2 class="section">Network</h2>
 <div class="grid">{{SERVICES}}</div>
@@ -17,8 +19,10 @@
 <p class="foot">Courtesy services only. This device stores nothing about your
 traffic and answers to nobody on this network.</p>
 <p class="stamp">{{DASHBOARD_LINE}}</p>
-</div><script>
-/* ── sun-engine v9 — realtime sun on today's solar arc, apex = House glyph.
+</div>
+
+<script>
+/* ── sun-engine v16 — realtime sun on today's solar arc, apex = House glyph.
    NOAA general solar equations (sub-minute). The path itself is invisible and
    spans the page edge-to-edge: sunrise at the left edge, sunset at the right;
    only the sun shows, drawn 1:1 in CSS pixels (no viewBox, so nothing ever
@@ -125,7 +129,7 @@ skyday.className = "skyday"; skyglow.className = "skyglow";
 sky.insertBefore(skyglow, svg); sky.insertBefore(skyday, skyglow);
 var horizonEl = document.createElement("div");
 horizonEl.className = "horizon";
-sky.appendChild(horizonEl);            /* after the svg: crisp, unblurred */
+sky.insertBefore(horizonEl, svg);      /* under the blur layer, part of the haze */
 var defs = el("defs");
 /* three concentric alpha-falloff gradients — every layer fades to zero alpha,
    so the sun has no drawable rim anywhere: a blinding centre lost in its own
@@ -178,6 +182,9 @@ var clip = el("clipPath"); clip.setAttribute("id", "abovehorizon");
 var clipRect = el("rect");
 clipRect.setAttribute("x", 0); clipRect.setAttribute("y", 0);
 clip.appendChild(clipRect); defs.appendChild(clip);
+var clipB = el("clipPath"); clipB.setAttribute("id", "belowhorizon");
+var clipBRect = el("rect"); clipBRect.setAttribute("x", 0);
+clipB.appendChild(clipBRect); defs.appendChild(clipB);
 var halo = el("circle"), glow = el("circle"), core = el("circle");
 halo.setAttribute("fill","url(#sunhalo)");
 glow.setAttribute("fill","url(#sunglow)"); core.setAttribute("fill","url(#suncore)");
@@ -188,7 +195,66 @@ for (var li = 0; li < lit.length; li++) lit[li].setAttribute("style","mix-blend-
 var grounded = [pool, pillar, halo, glow, core];
 for (var gi = 0; gi < grounded.length; gi++)
   grounded[gi].setAttribute("clip-path","url(#abovehorizon)");
-svg.append(defs, band, pool, pillar, halo, glow, core);
+/* the floor's light is RAY-TRACED: every ground pixel is a ray from the
+   eye to the floor, mirrored toward the sun, weighted by Cox-Munk (1954)
+   facet-slope probability (sigma^2 = .003 + .00512*W, W = 5 m/s) times
+   Schlick Fresnel (n = 1.33). The field renders per-pixel into a half-res
+   canvas (upscaled + blurred = continuous, no contours, no edges) and is
+   re-traced only when the sun has actually moved. Reference maths:
+   scratchpad glitter-sim.py — engine and sim agree within 1px. */
+var GK = 1094, GSIG = .169, GR0 = Math.pow(.33/2.33, 2), GH = 420;
+function glintI(aR, bR, phi){
+  var cb = Math.cos(bR), sb = Math.sin(bR);
+  var tx = -Math.sin(phi)*cb, ty = -Math.cos(phi)*cb, tz = sb;
+  var sy = Math.cos(aR), sz = Math.sin(aR);
+  var hx = tx, hy = sy+ty, hz = sz+tz;
+  var n = Math.sqrt(hx*hx + hy*hy + hz*hz);
+  if (!n || hz <= 0) return 0;
+  hx /= n; hy /= n; hz /= n;
+  var zx = -hx/hz, zy = -hy/hz;
+  var p = Math.exp(-(zx*zx + zy*zy)/(2*GSIG*GSIG));
+  var ci = Math.max(0, Math.min(1, sy*hy + sz*hz));
+  return p*(GR0 + (1-GR0)*Math.pow(1-ci, 5));
+}
+var gShade = lingrad("groundshade", ["0%","55%","100%"]);
+var shade = el("rect");
+shade.setAttribute("fill","url(#groundshade)");
+var groundCv = document.createElement("canvas");
+groundCv.className = "groundlight";
+groundCv.setAttribute("aria-hidden", "true");
+sky.appendChild(groundCv);
+var groundCtx = groundCv.getContext("2d");
+var groundKey = "";
+function traceGround(aR, sunX, vw, cCol, eCol){
+  var w2 = Math.max(2, Math.ceil(vw/2)), h2px = GH/2;
+  if (groundCv.width !== w2 || groundCv.height !== h2px){
+    groundCv.width = w2; groundCv.height = h2px;
+  }
+  var img = groundCtx.createImageData(w2, h2px);
+  var d = img.data, i = 0, py = 0;
+  for (; py < h2px; py++){
+    var bR = (py*2 + 1)/GK;
+    for (var px = 0; px < w2; px++){
+      var phi = (px*2 - sunX)/GK;
+      var I = glintI(aR, bR, phi);
+      var t = Math.min(1, I*1.15);
+      d[i++] = Math.round(eCol[0] + (cCol[0]-eCol[0])*t);
+      d[i++] = Math.round(eCol[1] + (cCol[1]-eCol[1])*t);
+      d[i++] = Math.round(eCol[2] + (cCol[2]-eCol[2])*t);
+      d[i++] = Math.round(Math.pow(I, .85)*130);
+    }
+  }
+  groundCtx.putImageData(img, 0, 0);
+}
+var floored = [shade];
+for (var fi = 0; fi < floored.length; fi++)
+  floored[fi].setAttribute("clip-path","url(#belowhorizon)");
+/* the floor gets a heavier blur than the sky: reflections on a rough
+   surface are softer than the light that made them */
+var groundG = el("g");
+groundG.setAttribute("style","filter:blur(9px)");
+groundG.append(shade);
+svg.append(defs, band, pool, pillar, halo, glow, core, groundG);
 var rays = document.createElement("span");
 rays.className = "rays"; rays.setAttribute("aria-hidden","true");
 
@@ -212,9 +278,12 @@ function layout(){
   var p2 = { x: vw, y: horizon };
   var c  = { x: 2*apex.x - (p0.x+p2.x)/2, y: 2*apex.y - (p0.y+p2.y)/2 };
   geo = { p0:p0, p2:p2, c:c, apex:apex };
-  sky.style.width = vw + "px"; sky.style.height = (horizon + 80) + "px";
-  svg.setAttribute("width", vw); svg.setAttribute("height", horizon + 80);
+  var ground = 420;
+  sky.style.width = vw + "px"; sky.style.height = (horizon + ground) + "px";
+  svg.setAttribute("width", vw); svg.setAttribute("height", horizon + ground);
   clipRect.setAttribute("width", vw); clipRect.setAttribute("height", horizon + 1);
+  clipBRect.setAttribute("y", horizon + 1); clipBRect.setAttribute("width", vw);
+  clipBRect.setAttribute("height", ground - 1);
   /* the horizon is the ground line, day and night alike: the search bar
      rests just above it, the clock sits midway between glyph and search,
      and the icon grid begins beneath it — nothing jumps at sunrise/sunset */
@@ -327,6 +396,27 @@ function tick(){
   setStops(gPillar, [[peak, .6], [edgeC, .25], [edgeC, 0]]);
   pillar.setAttribute("opacity", (pk*.9*edge).toFixed(3));
 
+  /* the floor answers the light: contact shadow under the line, mirrored
+     glow on the surface, glitter path spilling toward the viewer */
+  /* drive the ray-traced floor: position the canvas, re-trace only when
+     the sun has moved (altitude 0.2 deg / azimuth 4 px / layout) */
+  var hy2 = geo.p0.y;
+  shade.setAttribute("x", 0); shade.setAttribute("width", vw2);
+  shade.setAttribute("y", hy2); shade.setAttribute("height", 170);
+  setStops(gShade, [["rgb(4,8,20)", 0], ["rgb(4,8,20)", .12], ["rgb(4,8,20)", .42]]);
+  shade.setAttribute("opacity", edge.toFixed(3));
+  var aR = Math.max(.009, alt*RAD);
+  groundCv.style.top = hy2 + "px";
+  groundCv.style.width = vw2 + "px";
+  groundCv.style.height = GH + "px";
+  var wPeak = mixRGB(cCore, WHITE, .3);
+  var gkey = Math.round(alt/.2) + "|" + Math.round(p.x/4) + "|" + vw2;
+  if (gkey !== groundKey){
+    groundKey = gkey;
+    traceGround(aR, p.x, vw2, wPeak, cEdge);
+  }
+  groundCv.style.opacity = ((h2*.55 + dayA*.25)*edge).toFixed(3);
+
   /* the horizon line itself: faint and cool under a high sun, kindling
      ember around the sun's position as it drops to meet it */
   var sunPct = Math.round(p.x / Math.max(1, vw2) * 100);
@@ -352,15 +442,25 @@ function tick(){
 var timer = 0;
 function schedule(sec){ clearTimeout(timer); timer = setTimeout(tick, sec*1000); }
 var rsz = 0;
-window.addEventListener("resize", function(){ clearTimeout(rsz); rsz = setTimeout(tick, 150); });
+window.addEventListener("resize", function(){
+  tick(); clearTimeout(rsz); rsz = setTimeout(tick, 180);
+});
+if (window.ResizeObserver){
+  /* content growth (catalog load, amenities toggle, fonts) re-anchors the
+     grid, search and clock to the horizon at once — no transient drift.
+     Converges: margins settle, the observer stops firing. */
+  new ResizeObserver(function(){ tick(); }).observe(document.body);
+}
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) tick(); });
 tick();
 })();
-/* ── end sun-engine v9 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v16 ─────────────────────────────────────────────────── */
 
 /* amenities drop-down — the heading toggles the list on both surfaces
    (homepage builds its list async, hence the bounded poll). Default closed,
-   the choice is remembered. Authored-by: CPCS */
+   the choice is remembered. The binding is id="amenities", NOT the first
+   .amen-list: the House-services grid is also an .amen-list and must never
+   collapse. Authored-by: CPCS */
 (function(){
 "use strict";
 var tries = 0;
