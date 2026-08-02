@@ -143,7 +143,65 @@ font-feature-settings:"tnum" 1;letter-spacing:.01em}
 border-color:rgba(224,178,120,.35)}
 .amen-join .amen-icon svg{width:30px;height:30px}
 
-/* ── sun-engine v13 — daylight sun + solar-noon alignment ─────────────────────
+
+/* ── the keep: quests, tiles, and the lamp-lighting ─────────────────────────
+   A kept service leaves the quest list and joins the shelf as a lit window:
+   a 68px gradient tile in a 96px cell, the homepage idiom brought to the
+   board. The ignition below fires ONCE, on the render where a tile first
+   appears, and never again — the single loud moment this page is allowed. */
+.appgrid{display:flex;flex-wrap:wrap;justify-content:center;
+gap:18px;max-width:560px;margin:0 auto}
+.tile{display:flex;flex-direction:column;align-items:center;gap:8px;
+text-decoration:none;max-width:96px}
+.tile-icon{width:68px;height:68px;border-radius:18px;display:flex;
+align-items:center;justify-content:center;color:#fff;position:relative;
+overflow:hidden;background:var(--glass);border:1px solid var(--glass-edge);
+box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 10px 24px rgba(2,8,22,.45)}
+.tile-icon::after{content:"";position:absolute;inset:0;
+background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,0) 46%)}
+.tile-icon svg{width:36px;height:36px}
+.tile-name{font-size:12px;color:var(--muted);text-align:center;line-height:1.3}
+.tile:hover .tile-icon{transform:translateY(-2px)}
+.tile .tile-icon{transition:transform .15s}
+/* a quest is the amen row plus its keep control, stacked */
+.quest{display:flex;flex-direction:column;gap:4px}
+.quest .amen{width:auto}
+.quest-act summary{cursor:pointer;user-select:none;-webkit-user-select:none;
+list-style:none;display:inline-block;margin-left:60px;font-size:11px;
+font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+color:var(--bronze);opacity:.75}
+.quest-act summary::-webkit-details-marker{display:none}
+.quest-act summary:hover{opacity:1}
+.quest-act[open] summary{opacity:1}
+.quest-pending .quest-act summary{opacity:1;cursor:default}
+.quest-form{display:flex;flex-direction:column;gap:8px;margin:8px 0 6px 60px;
+max-width:340px}
+.quest-form label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;
+color:var(--muted)}
+.quest-form input{background:var(--glass);border:1px solid var(--glass-edge);
+border-radius:10px;padding:8px 10px;color:var(--ink);font:inherit;
+font-size:14px}
+.quest-form input::placeholder{color:var(--faint)}
+.quest-form button{align-self:flex-start;background:rgba(224,178,120,.14);
+border:1px solid rgba(224,178,120,.35);border-radius:999px;padding:6px 16px;
+color:var(--bronze);font:inherit;font-size:12px;font-weight:600;
+letter-spacing:.06em;cursor:pointer}
+.quest-form button:hover{background:rgba(224,178,120,.22)}
+.quest-seal small{color:var(--faint);font-size:11px;line-height:1.4}
+/* ignition: dark glass blooms into the gradient with a gold flash behind the
+   glyph. One-shot; reduced motion gets the lit state with no theatre. */
+@keyframes ph-ignite{0%{filter:brightness(.3) saturate(.3)}
+55%{filter:brightness(1.55) saturate(1.15)}100%{filter:none}}
+@keyframes ph-flash{0%{opacity:0}45%{opacity:.85}100%{opacity:0}}
+.tile.lit .tile-icon{animation:ph-ignite .9s ease-out both}
+.tile.lit .tile-icon::before{content:"";position:absolute;inset:-30%;
+background:radial-gradient(circle,rgba(234,208,166,.9),rgba(234,208,166,0) 65%);
+animation:ph-flash .9s ease-out both;pointer-events:none}
+@media(prefers-reduced-motion:reduce){
+.tile.lit .tile-icon{animation:none}
+.tile.lit .tile-icon::before{animation:none;opacity:0}}
+
+/* ── sun-engine v16 — daylight sun + solar-noon alignment ─────────────────────
    A soft-blurred sun rides today's solar curve, invisible path, edge-to-edge:
    sunrise at the left page edge, sunset at the right, apex pinned to the House
    glyph; at true solar noon it docks there — glyph goes white, gold spills,
@@ -210,10 +268,14 @@ border-color:rgba(224,178,120,.35)}
    haze, not an edge cut into it; colour and weight still follow the sun */
 .horizon{position:absolute;left:0;right:0;height:2px;pointer-events:none;
   transform:translateY(-50%);filter:blur(4px)}
+/* the ground raster: the Cox-Munk field ray-traced per pixel into a canvas
+   at half resolution; upscale + blur render it continuous, edge-free */
+.groundlight{position:absolute;left:0;pointer-events:none;
+  mix-blend-mode:screen;filter:blur(6px)}
 /* amenities as a drop-down: the heading is the toggle */
 .amen-toggle{cursor:pointer;user-select:none;-webkit-user-select:none}
 .amen-toggle .chev{display:inline-block;margin-left:7px;
   transition:transform .2s ease}
 .amen-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
 .amen-collapsed{display:none}
-/* ── end sun-engine v13 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v16 ─────────────────────────────────────────────────── */

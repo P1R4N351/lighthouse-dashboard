@@ -10,7 +10,7 @@
 
 <div class="desk">
 <div class="uptime">up {{UPTIME}}</div>
-<a class="logo" href="/system" aria-label="Piranesi" title="Piranesi"><svg viewBox="13 20 60 60" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 39 L43 28 L63 39"/><path d="M30 45 L30 69"/><path d="M43 45 L43 69"/><path d="M56 45 L56 69"/><path d="M19 72 L67 72"/></svg></a>
+<a class="logo" href="/about" aria-label="Piranesi" title="Piranesi"><svg viewBox="13 20 60 60" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 39 L43 28 L63 39"/><path d="M30 45 L30 69"/><path d="M43 45 L43 69"/><path d="M56 45 L56 69"/><path d="M19 72 L67 72"/></svg></a>
 <div class="host">{{DESIGNATION}}</div>
 <h2 class="section">Network</h2>
 <div class="grid">{{SERVICES}}</div>
@@ -22,7 +22,7 @@ traffic and answers to nobody on this network.</p>
 </div>
 
 <script>
-/* ── sun-engine v13 — realtime sun on today's solar arc, apex = House glyph.
+/* ── sun-engine v16 — realtime sun on today's solar arc, apex = House glyph.
    NOAA general solar equations (sub-minute). The path itself is invisible and
    spans the page edge-to-edge: sunrise at the left edge, sunset at the right;
    only the sun shows, drawn 1:1 in CSS pixels (no viewBox, so nothing ever
@@ -195,26 +195,65 @@ for (var li = 0; li < lit.length; li++) lit[li].setAttribute("style","mix-blend-
 var grounded = [pool, pillar, halo, glow, core];
 for (var gi = 0; gi < grounded.length; gi++)
   grounded[gi].setAttribute("clip-path","url(#abovehorizon)");
-/* the floor: a contact shadow grounding the line, the sun's glow mirrored
-   onto the surface, and a glitter path running from the sun's station on
-   the horizon down toward the viewer — light spilling across the land */
+/* the floor's light is RAY-TRACED: every ground pixel is a ray from the
+   eye to the floor, mirrored toward the sun, weighted by Cox-Munk (1954)
+   facet-slope probability (sigma^2 = .003 + .00512*W, W = 5 m/s) times
+   Schlick Fresnel (n = 1.33). The field renders per-pixel into a half-res
+   canvas (upscaled + blurred = continuous, no contours, no edges) and is
+   re-traced only when the sun has actually moved. Reference maths:
+   scratchpad glitter-sim.py — engine and sim agree within 1px. */
+var GK = 1094, GSIG = .169, GR0 = Math.pow(.33/2.33, 2), GH = 420;
+function glintI(aR, bR, phi){
+  var cb = Math.cos(bR), sb = Math.sin(bR);
+  var tx = -Math.sin(phi)*cb, ty = -Math.cos(phi)*cb, tz = sb;
+  var sy = Math.cos(aR), sz = Math.sin(aR);
+  var hx = tx, hy = sy+ty, hz = sz+tz;
+  var n = Math.sqrt(hx*hx + hy*hy + hz*hz);
+  if (!n || hz <= 0) return 0;
+  hx /= n; hy /= n; hz /= n;
+  var zx = -hx/hz, zy = -hy/hz;
+  var p = Math.exp(-(zx*zx + zy*zy)/(2*GSIG*GSIG));
+  var ci = Math.max(0, Math.min(1, sy*hy + sz*hz));
+  return p*(GR0 + (1-GR0)*Math.pow(1-ci, 5));
+}
 var gShade = lingrad("groundshade", ["0%","55%","100%"]);
-var gFloorGlow = grad("floorglow", ["0%","55%","100%"]);
-var gGlitter = lingrad("glitter", ["0%","50%","100%"]);
-var shade = el("rect"), floorGlow = el("ellipse"), glitter = el("polygon");
+var shade = el("rect");
 shade.setAttribute("fill","url(#groundshade)");
-floorGlow.setAttribute("fill","url(#floorglow)");
-glitter.setAttribute("fill","url(#glitter)");
-floorGlow.setAttribute("style","mix-blend-mode:screen");
-glitter.setAttribute("style","mix-blend-mode:screen");
-var floored = [shade, floorGlow, glitter];
+var groundCv = document.createElement("canvas");
+groundCv.className = "groundlight";
+groundCv.setAttribute("aria-hidden", "true");
+sky.appendChild(groundCv);
+var groundCtx = groundCv.getContext("2d");
+var groundKey = "";
+function traceGround(aR, sunX, vw, cCol, eCol){
+  var w2 = Math.max(2, Math.ceil(vw/2)), h2px = GH/2;
+  if (groundCv.width !== w2 || groundCv.height !== h2px){
+    groundCv.width = w2; groundCv.height = h2px;
+  }
+  var img = groundCtx.createImageData(w2, h2px);
+  var d = img.data, i = 0, py = 0;
+  for (; py < h2px; py++){
+    var bR = (py*2 + 1)/GK;
+    for (var px = 0; px < w2; px++){
+      var phi = (px*2 - sunX)/GK;
+      var I = glintI(aR, bR, phi);
+      var t = Math.min(1, I*1.15);
+      d[i++] = Math.round(eCol[0] + (cCol[0]-eCol[0])*t);
+      d[i++] = Math.round(eCol[1] + (cCol[1]-eCol[1])*t);
+      d[i++] = Math.round(eCol[2] + (cCol[2]-eCol[2])*t);
+      d[i++] = Math.round(Math.pow(I, .85)*130);
+    }
+  }
+  groundCtx.putImageData(img, 0, 0);
+}
+var floored = [shade];
 for (var fi = 0; fi < floored.length; fi++)
   floored[fi].setAttribute("clip-path","url(#belowhorizon)");
 /* the floor gets a heavier blur than the sky: reflections on a rough
    surface are softer than the light that made them */
 var groundG = el("g");
 groundG.setAttribute("style","filter:blur(9px)");
-groundG.append(shade, floorGlow, glitter);
+groundG.append(shade);
 svg.append(defs, band, pool, pillar, halo, glow, core, groundG);
 var rays = document.createElement("span");
 rays.className = "rays"; rays.setAttribute("aria-hidden","true");
@@ -359,32 +398,24 @@ function tick(){
 
   /* the floor answers the light: contact shadow under the line, mirrored
      glow on the surface, glitter path spilling toward the viewer */
-  /* the floor is lit from the sun's MIRROR IMAGE — as far below the line
-     as the sun stands above it — never by the horizon itself */
+  /* drive the ray-traced floor: position the canvas, re-trace only when
+     the sun has moved (altitude 0.2 deg / azimuth 4 px / layout) */
   var hy2 = geo.p0.y;
-  var mirrorY = hy2 + (hy2 - p.y);
   shade.setAttribute("x", 0); shade.setAttribute("width", vw2);
   shade.setAttribute("y", hy2); shade.setAttribute("height", 170);
   setStops(gShade, [["rgb(4,8,20)", 0], ["rgb(4,8,20)", .12], ["rgb(4,8,20)", .42]]);
   shade.setAttribute("opacity", edge.toFixed(3));
-  /* reflected bloom at the mirror point, smeared vertically the way rough
-     surfaces smear; it drifts deep (and clips away) as the sun climbs */
-  floorGlow.setAttribute("cx", p.x); floorGlow.setAttribute("cy", mirrorY);
-  floorGlow.setAttribute("rx", 90); floorGlow.setAttribute("ry", 230);
-  setStops(gFloorGlow, [[cssRGB(cCore), .42], [edgeC, .16], [edgeC, 0]]);
-  floorGlow.setAttribute("opacity", ((h2*.6 + dayA*.1)*edge).toFixed(3));
-  /* glitter streak: narrow at the horizon, widening toward the viewer,
-     BRIGHTEST where it crosses the mirror point — the middle stop rides it */
-  var gd2 = Math.min(400, 420 - 20);
-  /* a shimmer COLUMN, not a fan: reflection geometry pins its direction,
-     so the sides stay nearly parallel and dissolve before the viewer */
-  glitter.setAttribute("points",
-    (p.x - 10) + "," + hy2 + " " + (p.x + 10) + "," + hy2 + " " +
-    (p.x + 38) + "," + (hy2 + gd2) + " " + (p.x - 38) + "," + (hy2 + gd2));
-  var mOff = Math.max(.05, Math.min(.95, 1 - (mirrorY - hy2)/gd2));
-  gGlitter[1].setAttribute("offset", (mOff*100).toFixed(1) + "%");
-  setStops(gGlitter, [[edgeC, .04], [peak, .5], [edgeC, .03]]);
-  glitter.setAttribute("opacity", ((h2*.5 + dayA*.12)*edge).toFixed(3));
+  var aR = Math.max(.009, alt*RAD);
+  groundCv.style.top = hy2 + "px";
+  groundCv.style.width = vw2 + "px";
+  groundCv.style.height = GH + "px";
+  var wPeak = mixRGB(cCore, WHITE, .3);
+  var gkey = Math.round(alt/.2) + "|" + Math.round(p.x/4) + "|" + vw2;
+  if (gkey !== groundKey){
+    groundKey = gkey;
+    traceGround(aR, p.x, vw2, wPeak, cEdge);
+  }
+  groundCv.style.opacity = ((h2*.55 + dayA*.25)*edge).toFixed(3);
 
   /* the horizon line itself: faint and cool under a high sun, kindling
      ember around the sun's position as it drops to meet it */
@@ -423,7 +454,7 @@ if (window.ResizeObserver){
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) tick(); });
 tick();
 })();
-/* ── end sun-engine v13 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v16 ─────────────────────────────────────────────────── */
 
 /* amenities drop-down — the heading toggles the list on both surfaces
    (homepage builds its list async, hence the bounded poll). Default closed,
