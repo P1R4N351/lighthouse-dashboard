@@ -1,8 +1,8 @@
 {
   "schema": "piranesi.lighthouse.dashboard.manifest/1",
   "version": 17,
-  "released": "2026-08-02T16:32:04Z",
+  "released": "2026-08-02T16:43:57Z",
   "bundle": "dashboard.tar.gz",
-  "sha256": "416c2fa4cae32c4d870616b7a8efaa8302e37735d3984268c22d4c10ef173393",
-  "bytes": 15269
+  "sha256": "dad28c1940b680440978bfad5bcebc2a1d5dd6563c7e23a552800c867b87048f",
+  "bytes": 15371
 }
