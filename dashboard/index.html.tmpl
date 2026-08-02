@@ -7,6 +7,7 @@
 <style>{{STYLE}}</style></head><body>
 <div class="sunsky" id="sunsky" aria-hidden="true"><svg></svg></div>
 <div class="sunwash" id="sunwash" aria-hidden="true"></div>
+
 <div class="desk">
 <div class="uptime">up {{UPTIME}}</div>
 <a class="logo" href="/system" aria-label="Piranesi" title="Piranesi"><svg viewBox="13 20 60 60" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 39 L43 28 L63 39"/><path d="M30 45 L30 69"/><path d="M43 45 L43 69"/><path d="M56 45 L56 69"/><path d="M19 72 L67 72"/></svg></a>
@@ -19,8 +20,9 @@
 traffic and answers to nobody on this network.</p>
 <p class="stamp">{{DASHBOARD_LINE}}</p>
 </div>
+
 <script>
-/* ── sun-engine v11 — realtime sun on today's solar arc, apex = House glyph.
+/* ── sun-engine v12 — realtime sun on today's solar arc, apex = House glyph.
    NOAA general solar equations (sub-minute). The path itself is invisible and
    spans the page edge-to-edge: sunrise at the left edge, sunset at the right;
    only the sun shows, drawn 1:1 in CSS pixels (no viewBox, so nothing ever
@@ -198,7 +200,7 @@ for (var gi = 0; gi < grounded.length; gi++)
    the horizon down toward the viewer — light spilling across the land */
 var gShade = lingrad("groundshade", ["0%","55%","100%"]);
 var gFloorGlow = grad("floorglow", ["0%","55%","100%"]);
-var gGlitter = lingrad("glitter", ["0%","60%","100%"]);
+var gGlitter = lingrad("glitter", ["0%","50%","100%"]);
 var shade = el("rect"), floorGlow = el("ellipse"), glitter = el("polygon");
 shade.setAttribute("fill","url(#groundshade)");
 floorGlow.setAttribute("fill","url(#floorglow)");
@@ -352,21 +354,30 @@ function tick(){
 
   /* the floor answers the light: contact shadow under the line, mirrored
      glow on the surface, glitter path spilling toward the viewer */
+  /* the floor is lit from the sun's MIRROR IMAGE — as far below the line
+     as the sun stands above it — never by the horizon itself */
   var hy2 = geo.p0.y;
+  var mirrorY = hy2 + (hy2 - p.y);
   shade.setAttribute("x", 0); shade.setAttribute("width", vw2);
   shade.setAttribute("y", hy2); shade.setAttribute("height", 170);
   setStops(gShade, [["rgb(4,8,20)", 0], ["rgb(4,8,20)", .12], ["rgb(4,8,20)", .42]]);
   shade.setAttribute("opacity", edge.toFixed(3));
-  floorGlow.setAttribute("cx", p.x); floorGlow.setAttribute("cy", hy2);
-  floorGlow.setAttribute("rx", Math.max(300, vw2*.42)); floorGlow.setAttribute("ry", 105);
-  setStops(gFloorGlow, [[edgeC, .4], [edgeC, .15], [edgeC, 0]]);
-  floorGlow.setAttribute("opacity", ((h2*.6 + dayA*.14)*edge).toFixed(3));
+  /* reflected bloom at the mirror point, smeared vertically the way rough
+     surfaces smear; it drifts deep (and clips away) as the sun climbs */
+  floorGlow.setAttribute("cx", p.x); floorGlow.setAttribute("cy", mirrorY);
+  floorGlow.setAttribute("rx", 150); floorGlow.setAttribute("ry", 195);
+  setStops(gFloorGlow, [[cssRGB(cCore), .5], [edgeC, .18], [edgeC, 0]]);
+  floorGlow.setAttribute("opacity", ((h2*.65 + dayA*.12)*edge).toFixed(3));
+  /* glitter streak: narrow at the horizon, widening toward the viewer,
+     BRIGHTEST where it crosses the mirror point — the middle stop rides it */
   var gd2 = Math.min(400, 420 - 20);
   glitter.setAttribute("points",
     (p.x - 12) + "," + hy2 + " " + (p.x + 12) + "," + hy2 + " " +
-    (p.x + 170) + "," + (hy2 + gd2) + " " + (p.x - 170) + "," + (hy2 + gd2));
-  setStops(gGlitter, [[edgeC, 0], [cssRGB(cCore), .18], [peak, .5]]);
-  glitter.setAttribute("opacity", ((h2*.55 + dayA*.16)*edge).toFixed(3));
+    (p.x + 150) + "," + (hy2 + gd2) + " " + (p.x - 150) + "," + (hy2 + gd2));
+  var mOff = Math.max(.05, Math.min(.95, 1 - (mirrorY - hy2)/gd2));
+  gGlitter[1].setAttribute("offset", (mOff*100).toFixed(1) + "%");
+  setStops(gGlitter, [[edgeC, .04], [peak, .42], [edgeC, .1]]);
+  glitter.setAttribute("opacity", ((h2*.55 + dayA*.14)*edge).toFixed(3));
 
   /* the horizon line itself: faint and cool under a high sun, kindling
      ember around the sun's position as it drops to meet it */
@@ -405,7 +416,7 @@ if (window.ResizeObserver){
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) tick(); });
 tick();
 })();
-/* ── end sun-engine v11 ─────────────────────────────────────────────────── */
+/* ── end sun-engine v12 ─────────────────────────────────────────────────── */
 
 /* amenities drop-down — the heading toggles the list on both surfaces
    (homepage builds its list async, hence the bounded poll). Default closed,

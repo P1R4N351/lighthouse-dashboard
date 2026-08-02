@@ -22,6 +22,9 @@
 #
 # Exit: 0 ok / 2 usage / 3 missing tool / 4 build or signing failure
 #
+# Env: PORTAL_PY        outpost-portal.py to read the slot declaration from
+#      SLOT_REMOVAL_OK  1 = a slot the last release carried may be dropped
+#
 # P10 RELAXATIONS:
 #   R1 — `rm -rf` is confined to the staging dir this script mktemp -d's.
 #
@@ -46,7 +49,7 @@ parse_args() {
       --out)     [[ $# -ge 2 ]] || die "--out requires a value"; OUT="$2"; shift 2 ;;
       --version) [[ $# -ge 2 ]] || die "--version requires a value"; VERSION="$2"; shift 2 ;;
       --key)     [[ $# -ge 2 ]] || die "--key requires a value"; KEY="$2"; shift 2 ;;
-      -h|--help) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+      -h|--help) sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
       *) die "unknown arg: $1" ;;
     esac
   done
@@ -126,6 +129,90 @@ PY
   return 0
 }
 
+# Refuse to sign a template that has silently lost a slot.
+#
+# WHY THIS EXISTS: verify_archive proves the bundle carries the right FILES; it
+# says nothing about what is inside them. The device-side renderer substitutes a
+# fixed slot list and only fails CLOSED for a slot it does not define ("{{" left
+# over); a slot the template OMITS renders to nothing at all, so the section just
+# disappears with every gate green. That is exactly how v10 and v11 shipped
+# without the Services/House block. So: gate the CONTENT too, and derive the
+# required list rather than hand-transcribing it (a hand-copied list is how the
+# device's own _template_ok came to omit HOUSE_SECTION — P-BACKLOG [c160e17]).
+#
+# Two derivations, both machine-read:
+#   1. AUTHORITATIVE — INDEX_SLOTS / WEATHER_SLOTS parsed straight out of the
+#      portal that does the substituting (PORTAL_PY, overridable). Missing slot
+#      => refuse; slot the portal does not define => refuse (the renderer would
+#      discard the page).
+#   2. REGRESSION — the previously shipped dashboard.tar.gz in --out. Any slot
+#      the last release had and this one does not is a refusal. Needs no list at
+#      all and stays correct as slots are added.
+# Set SLOT_REMOVAL_OK=1 to authorise a deliberate slot retirement.
+slots_ok() {   # slots_ok <stagedir> <previous-tarball-or-empty>
+  PORTAL_PY="${PORTAL_PY:-${HOME}/Piranesi/skills/armbian-seed/assets/outpost/role/outpost-portal.py}" \
+  SLOT_REMOVAL_OK="${SLOT_REMOVAL_OK:-0}" \
+  python3 - "$1" "$2" <<'PY' || die "template slot gate rejected this build" 4
+import os, re, sys, tarfile
+
+stage, prev = sys.argv[1], sys.argv[2]
+TMPL = {"index.html.tmpl": "INDEX_SLOTS", "weather.html.tmpl": "WEATHER_SLOTS"}
+slots = lambda text: set(re.findall(r"\{\{([A-Z0-9_]+)\}\}", text))
+read = lambda p: open(p, encoding="utf-8").read()
+fail = []
+
+portal = os.environ.get("PORTAL_PY", "")
+declared = {}
+if portal and os.path.isfile(portal):
+    psrc = read(portal)
+    for tmpl, var in TMPL.items():
+        m = re.search(r"^%s\s*=\s*\(([^)]*)\)" % var, psrc, re.M)
+        if m:
+            declared[tmpl] = set(re.findall(r'"([A-Z0-9_]+)"', m.group(1)))
+if declared:
+    print("slot gate: %d slot declaration(s) read from %s" % (len(declared), portal))
+else:
+    print("slot gate: WARNING no portal slot declaration at %r — regression check only"
+          % portal, file=sys.stderr)
+
+prev_slots = {}
+if prev and os.path.isfile(prev):
+    with tarfile.open(prev, "r:gz") as tf:
+        for tmpl in TMPL:
+            try:
+                fh = tf.extractfile(tmpl)
+            except KeyError:
+                continue
+            if fh is not None:
+                prev_slots[tmpl] = slots(fh.read().decode("utf-8", "replace"))
+
+for tmpl in TMPL:
+    path = os.path.join(stage, tmpl)
+    if not os.path.isfile(path):
+        continue                      # stage_files already enforces presence
+    have = slots(read(path))
+    want = declared.get(tmpl)
+    if want is not None:
+        missing = sorted(want - have)
+        if missing:
+            fail.append("%s omits declared slot(s): %s" % (tmpl, ", ".join(missing)))
+        unknown = sorted(have - want)
+        if unknown:
+            fail.append("%s asks for slot(s) the portal does not define (the "
+                        "renderer would discard the page): %s" % (tmpl, ", ".join(unknown)))
+    lost = sorted(prev_slots.get(tmpl, set()) - have)
+    if lost and os.environ.get("SLOT_REMOVAL_OK") != "1":
+        fail.append("%s DROPS slot(s) the last shipped release carried: %s "
+                    "(set SLOT_REMOVAL_OK=1 if that retirement is deliberate)"
+                    % (tmpl, ", ".join(lost)))
+
+if fail:
+    sys.exit("\n".join("  - " + f for f in fail))
+print("slot gate ok")
+PY
+  return 0
+}
+
 write_manifest() {   # write_manifest <tarball> <version> <released> <dest>
   local sha bytes
   sha="$(sha256_of "$1")" || die "could not hash the bundle" 4
@@ -161,6 +248,9 @@ main() {
   trap '[[ -n "${STAGE_DIR}" ]] && rm -rf "${STAGE_DIR}"' EXIT INT TERM
   stage_files "${STAGE_DIR}" "${ver}" "${released}"
   tarball="${OUT}/dashboard.tar.gz"
+  # Content gate BEFORE tar: ${tarball} still holds the PREVIOUS release
+  # here, which is what the regression half of the check compares against.
+  slots_ok "${STAGE_DIR}" "${tarball}"
   # COPYFILE_DISABLE stops BSD tar emitting AppleDouble (`._*`) members for
   # extended attributes; --no-xattrs is the GNU-side equivalent and is passed
   # only when this tar accepts it, so the same script builds on both platforms.
