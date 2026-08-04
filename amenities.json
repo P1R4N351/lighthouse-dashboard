@@ -6,6 +6,30 @@
   "provenance": "Canonical copy lives in the homepage repo (projects/homepage/amenities.json) and is baked verbatim into every lighthouse image by mkimg-armbian.sh; tests/smoke.sh asserts those two are byte-identical. THIS copy is the public mirror: canon minus any entry whose URL carries a mesh-private identifier (.ts.net, .onion, RFC1918 or CGNAT), because publishing those would disclose part of the internal map — the reason this repo was seeded rather than forked. Withheld here in full: the `services` block (House Cinema, Audiobooks, and the standing invitation), every URL of which is mesh-private. A portal renders no heading for a block it has no rows for, so the section simply does not exist on a public copy.",
   "items": [
     {
+      "id": "doomsday",
+      "name": "Doomsday Clock",
+      "url": "https://thebulletin.org/doomsday-clock/",
+      "blurb": "The Bulletin of the Atomic Scientists' standing estimate of how late it is.",
+      "tag": "world",
+      "glyph": "clock",
+      "g": [
+        "#C4552F",
+        "#8E3315"
+      ]
+    },
+    {
+      "id": "worldpop",
+      "name": "Human Population",
+      "url": "https://www.worldometers.info/world-population/",
+      "blurb": "Worldometer's live count of everyone alive right now, and the rates behind it.",
+      "tag": "world",
+      "glyph": "people",
+      "g": [
+        "#5FB98C",
+        "#348A5E"
+      ]
+    },
+    {
       "id": "voxorb",
       "name": "VoxOrb",
       "url": "https://voxorb.com/globe?v=2.46358%2C35.22544%2C12666534%2C360%2C-89.9&c=0",
@@ -15,18 +39,6 @@
       "g": [
         "#4F9BE6",
         "#2A6BB0"
-      ]
-    },
-    {
-      "id": "worldpop",
-      "name": "World Population Clock",
-      "url": "https://www.worldometers.info/world-population/",
-      "blurb": "Worldometer's live count of everyone alive right now, and the rates behind it.",
-      "tag": "world",
-      "glyph": "people",
-      "g": [
-        "#5FB98C",
-        "#348A5E"
       ]
     },
     {
@@ -51,18 +63,6 @@
       "g": [
         "#7A86C0",
         "#4A5590"
-      ]
-    },
-    {
-      "id": "doomsday",
-      "name": "Doomsday Clock",
-      "url": "https://thebulletin.org/doomsday-clock/",
-      "blurb": "The Bulletin of the Atomic Scientists' standing estimate of how late it is.",
-      "tag": "world",
-      "glyph": "clock",
-      "g": [
-        "#C4552F",
-        "#8E3315"
       ]
     }
   ]
