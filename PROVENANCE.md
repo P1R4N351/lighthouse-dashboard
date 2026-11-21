@@ -6,7 +6,7 @@ This repo's visual language comes from **The House of Piranesi** homepage:
 
 | | |
 |---|---|
-| upstream repo | `piranesi/homepage` on gitea `100.72.144.19:18792` |
+| upstream repo | `piranesi/homepage` on a private gitea |
 | upstream commit at seeding | `771480f5f0a0c8dcb742f5cc3b8550470d69f188` (2026-07-29) |
 | files the design was taken from | `index.html` (the `:root` token block, `.desk`, `.amen*`, `footer`) |
 | shared canon | `amenities.json` — the homepage repo owns it and the image bakes it verbatim; **this repo carries the public mirror**: canon minus every mesh-private row (see the file's own `provenance` field, and "the mirror is a subset" below) |
