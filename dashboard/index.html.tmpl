@@ -30,8 +30,7 @@ traffic and answers to nobody on this network.</p>
    localStorage ph_sun = "lat,lon". Preview any moment with ?sunat=HH:MM and
    optionally sunday=YYYY-MM-DD. Byte-identical in the 8088 homepage and the
    lighthouse dashboard template. The sun's shade is a piecewise altitude
-   ramp; .skyday / .skyglow tint the sky from the sun's height and position.
-   Authored-by: CPCS */
+   ramp; .skyday / .skyglow tint the sky from the sun's height and position. */
 (function(){
 "use strict";
 var RAD = Math.PI/180, DAY = 86400000, NS = "http://www.w3.org/2000/svg";
@@ -460,7 +459,7 @@ tick();
    (homepage builds its list async, hence the bounded poll). Default closed,
    the choice is remembered. The binding is id="amenities", NOT the first
    .amen-list: the House-services grid is also an .amen-list and must never
-   collapse. Authored-by: CPCS */
+   collapse. */
 (function(){
 "use strict";
 var tries = 0;

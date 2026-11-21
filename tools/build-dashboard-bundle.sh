@@ -27,8 +27,6 @@
 #
 # P10 RELAXATIONS:
 #   R1 — `rm -rf` is confined to the staging dir this script mktemp -d's.
-#
-# Authored-by: CPCS
 set -euo pipefail
 
 readonly SIG_NAMESPACE="piranesi-lighthouse-dashboard"
@@ -138,7 +136,7 @@ PY
 # disappears with every gate green. That is exactly how v10 and v11 shipped
 # without the Services/House block. So: gate the CONTENT too, and derive the
 # required list rather than hand-transcribing it (a hand-copied list is how the
-# device's own _template_ok came to omit HOUSE_SECTION — P-BACKLOG [c160e17]).
+# device's own _template_ok came to omit HOUSE_SECTION).
 #
 # Two derivations, both machine-read:
 #   1. AUTHORITATIVE — INDEX_SLOTS / WEATHER_SLOTS parsed straight out of the

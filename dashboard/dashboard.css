@@ -11,8 +11,6 @@
  * alignment, shared with the House homepage); with scripts blocked the page
  * degrades to exactly the static night view. The House's other runtime-driven
  * bits (clock, live search, folder popovers) remain deliberately absent.
- *
- * Authored-by: CPCS
  */
 :root{
   --ink:#EAF1FF;
@@ -224,7 +222,7 @@ animation:ph-flash .9s ease-out both;pointer-events:none}
    daylight veil lifts the navy as the sun climbs, a warm blush hugs it when
    it is low. Night is untouched. This block is
    byte-identical in the 8088 homepage and the lighthouse dashboard.css — edit
-   both together. Authored-by: CPCS */
+   both together. */
 :root{--noonk:0;color-scheme:dark}
 /* the glyph's stroke is defined in SCREEN pixels, so no page scale, hover
    scale, or future resize can thicken or thin the mark */
