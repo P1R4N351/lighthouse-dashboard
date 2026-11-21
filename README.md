@@ -24,7 +24,7 @@ It fetches three files — `MANIFEST.json`, `MANIFEST.json.sig`,
 
 ### The problem this had to solve
 
-This repo lives on gitea at `100.72.144.19:18792`, a **tailnet address**. A
+This repo lives on gitea at a private **tailnet address**. A
 lighthouse dropped on a stranger's network has no tailnet, so a `git pull` from
 gitea would update nothing, forever, and say nothing about it. (There is also no
 `git` binary on the base Armbian image — verified on the live board — so a git
